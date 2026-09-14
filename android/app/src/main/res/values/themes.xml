@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.Quackulator" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:statusBarColor">#F6EEE3</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

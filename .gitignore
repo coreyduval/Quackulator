@@ -1,0 +1,16 @@
+# build outputs
+rust/target/
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/.idea/
+*.iml
+__pycache__/
+*.pyc
+.pytest_cache/
+# scratch
+*.latest.json
+
+# stale snapshot of the project from 2026-09-09 (kept on disk, not tracked)
+quackulator/
