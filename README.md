@@ -33,10 +33,27 @@ python sim.py -n 100 --calibrate # per-round curves to paste into data.OPPONENTS
 
 Windows: `quackulator.bat` (advisor) and `sim.bat` (benchmark).
 
+## The phone app (`app/index.html`, Android wrapper in `android/`)
+
+The top half of the screen is a cartoon of the pot: the 54 spaces as a snake with coins, VP
+and ruby marks, the droplet, the rat stone, every chip placed this round on its space and the
+scoring space highlighted, so the real pot and the model can be checked against each other at
+a glance. Rule moments that need attention are popups: **STOP** when a crow skull is drawn (pull
+the extra chips before anything else), **BOOM** on an explosion, the flask and mandrake choices,
+a round checklist (rat stone placement, the round-6 white chip, new shop colours) and an
+"at the table" checklist after each shop (chips to take, rubies to pay, droplet to move, flask to
+flip). The shop ranks every legal buy, shows what is left in the box, drops sold-out chips (the
+supply is shared; knock off the other players' purchases in the supply panel) and a ruby coach
+says exactly how to spend rubies: 2 for a permanent droplet step, 2 to refill the flask, or hold
+them for 1 VP per pair at the end. Games start with 1 ruby, as in the rules.
+
 ## v3: playing to win (Rust)
 
-The current app policy (`rust/weights_win.json`) maximises the probability of finishing first at
-a four-player table rather than expected score. `rust/` adds a `table` mode that seats 2–4
+The current app policy (`rust/weights_win_v31.json`) maximises the probability of finishing first
+at a four-player table rather than expected score. It was retrained on 2026-09-15 with the box's
+chip supply, the starting ruby and random ruby spends during exploration (the earlier model had
+never refilled its flask, so it could not value one); it wins 33 % of seats against 21 % for the
+previous `weights_win.json` at a mixed table and buys blue and green where the old one bought red. `rust/` adds a `table` mode that seats 2–4
 policies at one table (rat tails, bonus die and black chips settled from the real results) and
 `train --table`, which fits a win-probability model on top of the learned score model. It wins
 34 % of four-player games against three copies of the v2 policy (25 % = equal). The reasoning is

@@ -19,6 +19,8 @@ pub fn play_table(seed: u64, seats: &[Seat], depth: u8, record: bool, explore: f
     let mut rngs: Vec<Rng> = (0..n).map(|i| Rng::new(seed * 4 + i as u64)).collect();
     let mut ps: Vec<Player> = (0..n).map(|_| new_player()).collect();
     let mut res: Vec<GameResult> = (0..n).map(|_| new_result()).collect();
+    // one box of chips for the table; sold-out types leave the shop for everyone
+    let mut stock = initial_stock(n as u32);
     for rnd in 1..=ROUNDS {
         // rat tails from the real leader; margin = my VP - best other seat's VP
         let leader = ps.iter().map(|p| p.vp).max().unwrap();
@@ -32,7 +34,7 @@ pub fn play_table(seed: u64, seats: &[Seat], depth: u8, record: bool, explore: f
             let rats = if rnd >= 2 { rat_tails(ps[i].vp, leader) } else { 0 };
             res[i].rats += rats;
             if trace { trace_round_header(&format!("P{} ", i + 1), rnd, &ps[i], rats, margin); }
-            brewed.push(brew_phase(&ps[i], rnd, seats[i].as_deref(), depth, rats, margin, &mut rngs[i], trace));
+            brewed.push(brew_phase(&ps[i], rnd, seats[i].as_deref(), depth, rats, margin, &stock, &mut rngs[i], trace));
         }
         // bonus die: furthest non-exploded pot(s)
         let best = brewed.iter().filter(|b| !b.exploded).map(|b| b.space).max();
@@ -50,8 +52,8 @@ pub fn play_table(seed: u64, seats: &[Seat], depth: u8, record: bool, explore: f
             let won_die = !b.exploded && Some(b.space) == best;
             if trace { println!("--- P{} round {} settle: space {}{} blacks {} -> black ({}), die {}", i + 1, rnd, b.space, if b.exploded { " (exploded)" } else { "" }, b.blacks,
                                 match black { (true, true) => "droplet+ruby", (true, false) => "droplet", _ => "nothing" }, if won_die { "ROLLS" } else { "no" }); }
-            let coins = settle_phase(&mut ps[i], b, black, won_die, &mut rngs[i], trace, &mut res[i]);
-            shop_phase(&mut ps[i], rnd, seats[i].as_deref(), coins, &mut rngs[i], explore, trace, &mut res[i]);
+            let coins = settle_phase(&mut ps[i], b, black, won_die, &mut stock, &mut rngs[i], trace, &mut res[i]);
+            shop_phase(&mut ps[i], rnd, seats[i].as_deref(), coins, &mut stock, &mut rngs[i], explore, trace, &mut res[i]);
         }
     }
     let top = ps.iter().map(|p| p.vp).max().unwrap();

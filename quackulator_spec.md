@@ -28,7 +28,8 @@ or from numbers the user types in advisor mode.
    - D. **Victory points** on the scoring space. If exploded: choose **either** VP **or** coins.
    - E. **Shop** — coins = scoring-space coin number. Buy 1 or 2 chips of **different** colours.
      Unused coins are lost. Yellow purchasable from round 2, purple from round 3.
-   - F. **Rubies** — 2 rubies → droplet +1 (permanent), or 2 rubies → refill flask.
+   - F. **Rubies** — only now, any number of times: 2 rubies → droplet +1 (permanent), or
+     2 rubies → refill flask. Unspent rubies carry over (2 = 1 VP after round 9).
 5. **Round 6**: add one white 1-chip to the bag.
 6. **Round 9**: after the round, buy VP at 5 coins or 2 rubies each, repeatable. Coins
    cannot be spent on chips usefully; the engine converts `coins // 5` and `rubies // 2` into VP.
@@ -38,9 +39,19 @@ or from numbers the user types in advisor mode.
 Once per refill: after drawing a white chip that did **not** explode the pot, you may put it
 back in the bag (position and white-sum revert). Refill costs 2 rubies at end of round.
 
-### Starting bag
+### Starting bag and resources
 
-4× white 1, 2× white 2, 1× white 3, 1× orange 1, 1× green 1.
+4× white 1, 2× white 2, 1× white 3, 1× orange 1, 1× green 1. Every player also starts with
+**1 ruby**, a full flask and the droplet on space 0.
+
+### Chip supply
+
+The box holds 215 chips and the supply is shared by the table; a sold-out chip may not be
+bought (`data.rs: STOCK`, `app: STOCK`): white 20/8/4, orange 20, green 15/10/13,
+blue 14/10/10, red 12/8/10, yellow 13/6/10, purple 15, black 18 (1/2/4-chips). The sim keeps
+one supply per table (solo mode: per player, since the modelled opponents buy nothing); the app
+keeps a supply counter that the player's own buys reduce and that the user can edit for the other
+players' purchases.
 
 ### Set 1 ingredient effects
 
@@ -73,7 +84,9 @@ coins: 21 21  22 22  23 23 24 24  25 25  26 26 27 27  28 28  29 29 30 30  31 31 
 VP:    6  6   7  7   7  8  8  8   9  9   9  10 10 10  11 11  11 12 12 12  12 13 13 13  14 14 15
 ```
 
-Rat tails on the VP track (`RAT_TAIL_VP`) are also data — reconstructed, verify.
+Rat tails on the VP track (`RAT_TAIL_VP`) are also data — reconstructed, verify. The app shows
+the computed count with the assumed tail positions and lets the user correct it, and draws the
+rat stone on its board so the physical pot and the model can be compared before the first draw.
 
 ## 3. Solver
 

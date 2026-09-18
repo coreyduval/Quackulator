@@ -39,7 +39,7 @@ Binary: `target/release/quackulator` (`quackulator.exe` on Windows). No dependen
         those outcomes are unknown until every pot has stopped. Prints per-seat mean VP, win%,
         rat tails and die rolls per game. Fortune-teller cards are not modelled (nor in sim).
 
-    cargo run --release -- train --table --games 5000 --passes 6 --explore 0.2 --init weights.json --out weights_win.json
+    cargo run --release -- train --table --games 5000 --passes 4 --explore 0.2 --init weights_win.json --out weights_win_v31.json
         WIN-objective training at 4-seat tables. The value function becomes P(win the game) from
         the start of each round (logistic regression, format quackulator-win-v2) with one extra
         feature, margin = my VP - best other player's VP, and a round-10 game-end model in the
@@ -98,8 +98,12 @@ rubies, flask, total white value, coloured-chip count, orange×red count, white 
 The model is deliberately small so it exports as plain JSON and runs in the phone app in
 microseconds.
 
-Exploration (`--explore`, default 10 % of purchases random) is there so the value fit sees
-colours the current policy would never buy; without it the first learned pass can collapse
+Exploration (`--explore`, default 10 % of shops random) is there so the value fit sees
+colours the current policy would never buy — and, since 2026-09-15, random ruby spends too:
+the first win model never refilled the flask, so every sample after round 1 had an empty flask
+and the flask coefficient collapsed to exactly 0, which made refilling look worthless forever.
+The chip supply is limited as in the box (`data::STOCK`, one supply per table, a sold-out chip
+leaves the shop) and every player starts with 1 ruby; without it the first learned pass can collapse
 (seen in a 400-game smoke test: 38 → 27 → 37 → 38 VP over four passes). With 10k games per
 pass this is much less of an issue, but if a pass scores badly, just run more passes — the
 best policy is kept.

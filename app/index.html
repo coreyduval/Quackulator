@@ -4,113 +4,194 @@
 :root{
   --bg:#F6EEE3; --panel:#FFFFFF; --panel2:#F9E4E9; --ink:#2A2230; --ink2:#6B5E70; --line:#E5D6CF;
   --potion:#C9456A; --potion-soft:#F3B9C8; --iron:#3A3543; --ruby:#D2333F; --gold:#B98A2C; --go:#2F8F5B;
-  --coin:#E9C46A;
+  --coin:#E9C46A; --cell:#FBF6EE; --cell2:#F1E6D6; --score:#FFF1B8;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#221F27; --panel:#2E2A35; --panel2:#3A2C36; --ink:#F3ECEF; --ink2:#B9AEBE; --line:#463F4E;
     --potion:#E8698D; --potion-soft:#6B3A4B; --iron:#17151B; --ruby:#F05562; --gold:#E0B25A; --go:#4FBF7E;
+    --cell:#2B2731; --cell2:#332E3B; --score:#5A4A1E;
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#221F27; --panel:#2E2A35; --panel2:#3A2C36; --ink:#F3ECEF; --ink2:#B9AEBE; --line:#463F4E;
   --potion:#E8698D; --potion-soft:#6B3A4B; --iron:#17151B; --ruby:#F05562; --gold:#E0B25A; --go:#4FBF7E;
+  --cell:#2B2731; --cell2:#332E3B; --score:#5A4A1E;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Nunito Sans",system-ui,sans-serif;font-size:16px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Nunito Sans",system-ui,sans-serif;font-size:16px;line-height:1.4;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
 h1,h2,h3,.display{font-family:Fraunces,Georgia,serif;text-wrap:balance;margin:0}
-.app{max-width:520px;margin:0 auto;padding:0 14px 110px}
-.top{display:flex;align-items:baseline;justify-content:space-between;padding:14px 0 8px}
-.top h1{font-size:26px;font-weight:900;letter-spacing:-.01em}
-.top .sub{color:var(--ink2);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
-.card h2{font-size:18px;font-weight:700;margin-bottom:8px}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.grow{flex:1}
-label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em}
-input[type=number],select{font:inherit;font-size:17px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);width:100%}
-button{font:inherit;font-weight:700;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:12px;padding:10px 14px;cursor:pointer}
+.app{max-width:520px;margin:0 auto;padding:0 12px 120px}
+button{font:inherit;font-weight:700;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:12px;padding:10px 14px;cursor:pointer;touch-action:manipulation}
 button:focus-visible{outline:3px solid var(--potion);outline-offset:2px}
 button.primary{background:var(--potion);border-color:var(--potion);color:#fff}
 button.ghost{background:transparent}
 button.small{padding:6px 10px;font-size:14px}
+button.tiny{padding:2px 9px;font-size:15px;border-radius:8px;min-width:32px}
 button:disabled{opacity:.45;cursor:default}
+button:active{transform:scale(.97)}
 .num{font-variant-numeric:tabular-nums}
+input[type=number],select{font:inherit;font-size:17px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);width:100%}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:10px 0}
+.card h2{font-size:17px;font-weight:700;margin-bottom:6px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+.muted{color:var(--ink2);font-size:13px}
+.kv{display:grid;grid-template-columns:1fr auto;gap:5px 12px;font-size:15px}
+.kv b{font-size:16px}
+.tag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--potion);color:#fff;margin-left:8px;vertical-align:middle}
+.tag.out{background:var(--iron)}
+.hidden{display:none!important}
+details.card summary{cursor:pointer;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.card summary::after{content:"▸";color:var(--ink2)}
+details.card[open] summary::after{content:"▾"}
+details.card summary .muted{font-weight:600}
 
-/* verdict */
-.verdict{border-radius:16px;padding:16px 16px 14px;color:#fff;background:var(--iron);display:flex;flex-direction:column;gap:6px}
-.verdict.draw{background:linear-gradient(160deg,#2C7A4F,#1F5A3A)}
-.verdict.stop{background:linear-gradient(160deg,#B8323F,#7E1F29)}
-.verdict.boom{background:linear-gradient(160deg,#3A3543,#17151B)}
-.verdict .word{font-family:Fraunces,Georgia,serif;font-size:54px;font-weight:900;line-height:1;letter-spacing:-.02em}
-.verdict .why{font-size:14px;opacity:.9}
-.verdict .stats{display:flex;gap:14px;font-size:13px;opacity:.95;flex-wrap:wrap}
-.verdict .stats b{font-size:16px}
+/* ---------- HUD */
+.hud{padding:calc(8px + env(safe-area-inset-top,0px)) 0 6px}
+.hud-top{display:flex;align-items:center;justify-content:space-between;gap:8px 10px;flex-wrap:wrap}
+.hud h1{font-size:clamp(17px,5.4vw,22px);font-weight:900;letter-spacing:-.01em;white-space:nowrap}
+.pips{display:flex;gap:3px;flex:none}
+.pips i{width:10px;height:10px;border-radius:50%;border:2px solid var(--line);display:block}
+.pips i.done{background:var(--potion);border-color:var(--potion)}
+.pips i.now{border-color:var(--potion);box-shadow:0 0 0 3px var(--potion-soft)}
+.hud-sub{color:var(--ink2);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+.hud-stats{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.hud-stats span{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:12px;color:var(--ink2);font-weight:700;white-space:nowrap}
+.hud-stats span b{color:var(--ink);font-size:14px}
 
-/* pot status */
-.status{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
-.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
-.stat .k{font-size:11px;color:var(--ink2);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-.stat .v{font-size:22px;font-weight:800;line-height:1.1}
-.bombs{display:flex;gap:3px;margin-top:4px}
-.bombs i{width:10px;height:10px;border-radius:50%;border:1px solid var(--ink2);display:block}
-.bombs i.on{background:var(--ruby);border-color:var(--ruby)}
-
-/* chip grid */
-.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.chip{position:relative;aspect-ratio:1;border-radius:50%;border:3px solid transparent;font-weight:800;font-size:20px;display:flex;align-items:center;justify-content:center;color:#fff;padding:0;box-shadow:inset 0 -4px 0 rgba(0,0,0,.18)}
-.chip .cnt{position:absolute;top:-4px;right:-4px;background:var(--ink);color:var(--bg);font-size:12px;border-radius:999px;padding:1px 7px;border:2px solid var(--bg)}
-.chip.sel{outline:4px solid var(--gold)}
-.c-W{background:#F7F2EA;color:#2A2230;border-color:#D9CFC3}
+/* ---------- board (the pot spiral, opened from the floating button) */
+.fab{position:fixed;right:14px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:12;background:var(--iron);color:#fff;border:2px solid rgba(255,255,255,.55);border-radius:999px;padding:9px 14px;font-size:15px;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.fab b{font-size:17px;color:#fff}
+.modal.center.board{padding:8px}
+.modal.center.board .box{max-width:470px;padding:8px 6px 10px}
+.spiral{width:100%;height:auto;display:block}
+.spiral .cell{fill:var(--cell);stroke:var(--line);stroke-width:1}
+.spiral .cell.alt{fill:var(--cell2)}
+.spiral .cell.past{opacity:.4}
+.spiral .cell.score{fill:var(--score);stroke:var(--gold);stroke-width:3}
+.spiral text{font-family:"Nunito Sans",system-ui,sans-serif;fill:var(--ink);text-anchor:middle;pointer-events:none}
+.spiral .idx{font-size:6.5px;fill:var(--ink2);font-weight:700}
+.spiral .coin{font-size:12px;font-weight:800}
+.spiral .vp{font-size:6.5px;fill:var(--ink2);font-weight:700}
+.spiral .rb{fill:var(--ruby)}
+.spiral .dv{font-size:13px;font-weight:900;fill:#fff}
+.spiral .dv.dark{fill:#2A2230}
+.spiral .mk{font-size:13px}
+.bl{font-size:14px;color:var(--ink2);margin-top:6px;text-align:center}
+.bl b{color:var(--ink);font-size:16px}
+.spiral.tap .hit{cursor:pointer}
+.spiral .chipc{stroke:rgba(255,255,255,.75);stroke-width:2}
+.spiral .chipc.last{stroke:var(--gold);stroke-width:3}
+.spiral .chipc.boom{stroke:var(--ruby);stroke-width:3}
+.need input,.need select{border:2px solid var(--potion);box-shadow:0 0 0 3px var(--potion-soft)}
+label.f.need{color:var(--potion)}
+.prompt label.f{font-size:12px;text-align:center}
+.prompt input{font-size:24px;font-weight:800;text-align:center;padding:10px 6px}
+.disc{width:26px;height:26px;flex:none;border-radius:50%;display:inline-flex;vertical-align:middle;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#fff;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2),0 1px 2px rgba(0,0,0,.3);border:2px solid rgba(255,255,255,.7)}
+.disc.last{animation:pop .35s ease-out;box-shadow:0 0 0 3px var(--gold),inset 0 -3px 0 rgba(0,0,0,.2)}
+.disc.boom{box-shadow:0 0 0 3px var(--ruby),0 0 12px var(--ruby),inset 0 -3px 0 rgba(0,0,0,.2)}
+@keyframes pop{0%{transform:scale(.3)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+.c-W{background:#F7F2EA;color:#2A2230!important;border-color:#D9CFC3}
 .c-O{background:#E8862E}
 .c-G{background:#3C8C4C}
 .c-B{background:#3D63C6}
 .c-R{background:#C93A34}
-.c-Y{background:#E6B92E;color:#2A2230}
+.c-Y{background:#E6B92E;color:#2A2230!important}
 .c-P{background:#7A46A8}
 .c-K{background:#2A2230}
+
+/* ---------- verdict */
+.verdict{border-radius:16px;padding:12px 14px;color:#fff;background:var(--iron);display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.verdict.draw{background:linear-gradient(160deg,#2C7A4F,#1F5A3A)}
+.verdict.stop{background:linear-gradient(160deg,#B8323F,#7E1F29)}
+.verdict.boom{background:linear-gradient(160deg,#3A3543,#17151B)}
+.verdict .word{font-family:Fraunces,Georgia,serif;font-size:44px;font-weight:900;line-height:1;letter-spacing:-.02em}
+.verdict .why{font-size:13px;opacity:.92}
+.verdict .stats{display:flex;gap:14px;font-size:12px;opacity:.95;flex-wrap:wrap}
+.verdict .stats b{font-size:15px}
+.bombs{display:inline-flex;gap:3px;vertical-align:middle;margin-left:6px}
+.bombs i{width:9px;height:9px;border-radius:50%;border:1px solid rgba(255,255,255,.7);display:block}
+.bombs i.on{background:#fff}
+
+/* ---------- chip grid */
+.chips{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.chip{position:relative;aspect-ratio:1;border-radius:50%;border:3px solid transparent;font-weight:800;font-size:19px;display:flex;align-items:center;justify-content:center;color:#fff;padding:0;box-shadow:inset 0 -4px 0 rgba(0,0,0,.18)}
+.chip .cnt{position:absolute;top:-4px;right:-4px;background:var(--ink);color:var(--bg);font-size:11px;border-radius:999px;padding:1px 6px;border:2px solid var(--bg)}
 .chip:disabled{opacity:.25}
 .legend{font-size:12px;color:var(--ink2);margin-top:8px}
+.log{font-size:12px;color:var(--ink2);margin-top:6px;max-height:60px;overflow:auto}
 
-/* bottom bar */
-.bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
-.bar .in{max-width:520px;margin:0 auto;display:flex;gap:10px}
-.bar button{flex:1;padding:14px;font-size:17px;border-radius:14px}
-.bar button.stop{background:var(--ruby);border-color:var(--ruby);color:#fff}
+/* ---------- bag / supply editors */
+.bagedit{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:8px}
+.bagedit .be{display:flex;align-items:center;gap:4px;background:var(--panel2);border-radius:10px;padding:4px 5px;min-width:0}
+.bagedit .be .chip{width:30px;height:30px;aspect-ratio:auto;font-size:13px;flex:none}
+.bagedit .be b{flex:1;text-align:center;font-size:16px;min-width:0;overflow:hidden}
+.bagedit .be .tiny{min-width:28px;padding:2px 6px;flex:none}
+.bagedit .be.out{opacity:.55}
+.bagedit .be.out b{color:var(--ruby)}
 
-/* modal */
-.modal{position:fixed;inset:0;background:rgba(20,15,25,.55);display:flex;align-items:flex-end;justify-content:center;z-index:10}
-.modal .box{background:var(--panel);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));max-height:85vh;overflow:auto}
-.modal h2{font-size:20px;margin-bottom:6px}
+/* ---------- options / modals */
 .opts{display:flex;flex-direction:column;gap:8px;margin-top:10px}
-.opt{display:flex;justify-content:space-between;align-items:center;text-align:left;padding:12px 14px}
+.opt{display:flex;justify-content:space-between;align-items:center;text-align:left;padding:12px 14px;gap:10px}
 .opt.best{border-color:var(--potion);background:var(--panel2)}
-.opt .ev{color:var(--ink2);font-size:14px}
-.tag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--potion);color:#fff;margin-left:8px}
+.opt .ev{color:var(--ink2);font-size:14px;white-space:nowrap}
 .mods{display:flex;gap:6px;flex-wrap:wrap}
 .mods button.on{background:var(--potion-soft);border-color:var(--potion)}
-.kv{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:15px}
-.kv b{font-size:16px}
-.muted{color:var(--ink2);font-size:13px}
-.log{font-size:13px;color:var(--ink2);margin-top:6px;max-height:80px;overflow:auto}
-.hidden{display:none!important}
-.bagedit{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
 .modrows{display:flex;flex-direction:column;gap:8px}
 .mr{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .mr>span:first-child{flex:1 1 140px}
-.bagedit .be{display:flex;align-items:center;gap:6px;background:var(--panel2);border-radius:10px;padding:4px 6px}
-.bagedit .be .chip{width:34px;height:34px;aspect-ratio:auto;font-size:14px;flex:none}
-.bagedit .be b{flex:1;text-align:center;font-size:18px}
-.bagedit .be button{padding:2px 8px;border-radius:8px}
+.modal{position:fixed;inset:0;background:rgba(20,15,25,.55);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.modal .box{background:var(--panel);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));max-height:85vh;overflow:auto}
+.modal h2{font-size:20px;margin-bottom:6px}
+.modal.center{align-items:center;padding:20px}
+.modal.center .box{border-radius:20px;max-width:440px;text-align:center;animation:pop .3s ease-out;padding:22px 18px 18px}
+.modal.center .icon{font-size:52px;line-height:1}
+.modal.center h2{font-size:30px;font-weight:900;margin:8px 0 6px}
+.modal.center .body{font-size:15px;color:var(--ink);text-align:left}
+.modal.center .body ul{margin:8px 0 0;padding-left:20px}
+.modal.center .body li{margin:4px 0}
+.modal.center .opts{margin-top:14px}
+.modal.center .opts button{padding:14px;font-size:16px;border-radius:14px}
+.modal.center.stop .box{border:4px solid var(--ruby)}
+.modal.center.stop h2{color:var(--ruby)}
+.modal.center.boom .box{background:var(--iron);color:#fff;border:4px solid var(--gold)}
+.modal.center.boom h2{color:var(--gold)}
+.modal.center.boom .body,.modal.center.boom .muted{color:#fff;opacity:.92}
+.modal.center.go .box{border:4px solid var(--go)}
+.modal.center.go h2{color:var(--go)}
+.pick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.pick .disc{width:38px;height:38px;font-size:16px}
+
+/* ---------- ruby coach */
+.coach{border-radius:14px;padding:12px 14px;background:linear-gradient(160deg,#7E1F29,#B8323F);color:#fff;margin-top:8px}
+.coach .big{font-family:Fraunces,Georgia,serif;font-size:22px;font-weight:900;line-height:1.15}
+.coach .why{font-size:13px;opacity:.92;margin-top:4px}
+.coach.hold{background:linear-gradient(160deg,#3A3543,#17151B)}
+.gems{display:inline-flex;gap:3px;vertical-align:middle;margin-left:6px}
+.gems i{width:12px;height:12px;background:#fff;transform:rotate(45deg);border-radius:2px;display:block;opacity:.95}
+.gems i.spent{opacity:.35}
+
+/* ---------- bottom bar + toast */
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));z-index:10}
+.bar .in{max-width:520px;margin:0 auto;display:flex;gap:10px}
+.bar button{flex:1;padding:14px;font-size:17px;border-radius:14px}
+.bar button.stop{background:var(--ruby);border-color:var(--ruby);color:#fff}
+.bar button.ghost{flex:0 0 auto}
+#toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:30;pointer-events:none}
+.toast{background:var(--iron);color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.3);animation:pop .3s ease-out;white-space:nowrap}
 .thinking{font-size:13px;color:var(--ink2)}
-@media (prefers-reduced-motion:no-preference){.verdict{transition:background .25s}}
+@media (prefers-reduced-motion:reduce){.disc.last,.modal.center .box,.toast{animation:none}}
 </style>
 
 <div class="app" id="app"></div>
 <div id="modal"></div>
+<div id="toast"></div>
+<button class="fab" id="fab" aria-label="Show the pot board">🫕</button>
 
 <script>
 // ============================================================ DATA
@@ -133,9 +214,13 @@ const WHY={
   K:"End of round: more black than your neighbours = droplet step (+ ruby if you beat both)."};
 const PRICES={O1:3,G1:4,G2:8,G4:14,B1:5,B2:10,B4:19,R1:6,R2:10,R4:16,Y1:8,Y2:12,Y4:18,P1:9,K1:10};
 const UNLOCK={O:1,G:1,B:1,R:1,Y:2,P:3,K:1};
+// chips in the box (215). The supply is shared by the table; a sold-out chip cannot be bought.
+const STOCK={W1:20,W2:8,W3:4,O1:20,G1:15,G2:10,G4:13,B1:14,B2:10,B4:10,R1:12,R2:8,R4:10,Y1:13,Y2:6,Y4:10,P1:15,K1:18};
+const START_RUBIES=1; // every player starts with one ruby
 const BUYABLE=Object.keys(PRICES).map(k=>IDX[k]);
 const START_BAG=()=>{const b=new Array(N).fill(0);b[IDX.W1]=4;b[IDX.W2]=2;b[IDX.W3]=1;b[IDX.O1]=1;b[IDX.G1]=1;return b;};
 const ROUNDS=9, EXTRA_WHITE_ROUND=6;
+const initialStock=players=>{const sb=START_BAG();return CHIPS.map((c,i)=>Math.max(0,STOCK[NAME(i)]-sb[i]*players));};
 const BONUS_DIE=["vp1","vp1","vp2","ruby","droplet","orange"];
 const OPP={n:2,leader_vp:[0,0,1,2,4,6,10,15,21,30],best_space_mean:[0,9,11,13,15,18,21,26,31,36],best_space_sd:5,p_survive:.75,opp_black:[0,0,.1,.3,.5,.7,.9,1.1,1.3,1.5]};
 const RAT_TAIL_VP=[1,3,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50];
@@ -144,7 +229,7 @@ const I_O=IDX.O1,I_P=IDX.P1,I_K=IDX.K1,I_W=[null,IDX.W1,IDX.W2,IDX.W3];
 
 // ============================================================ LEARNED VALUE FUNCTION (optional)
 // Filled in by rust/install_weights.py from a trained weights.json; null = v1 heuristic rates.
-const VMODEL={"rounds":[[-0.996907,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-0.0,-0.0,0.0,0.0,0.0],[-2.781227,0.0,0.0,0.0,-0.201326,-0.009968,0.093865,0.0,0.002175,0.258965,0.0,-0.038375,0.134377,0.0,-0.073895,-0.024227,0.0,0.0,0.335714,-0.0,0.0,0.0,0.013371,-0.029905,0.093865,0.0,0.002175,0.258965,0.0,-0.038375,0.134377,0.0,-0.073895,-0.024227,0.0,0.0,0.335714,0.355888,0.077614,0.155504,0.0,-0.0,0.477305,0.089407,-0.036598,0.065554],[-4.029483,0.0,0.0,0.0,-0.240885,-0.183972,0.131775,0.401755,-0.056224,0.067334,0.0,-0.317851,0.210687,0.0,-0.006746,0.053897,0.0,0.13541,0.396302,0.0,0.0,0.0,-0.007142,-0.012406,-0.036645,0.401755,-0.075188,0.282132,0.0,0.156065,-0.022412,0.0,-0.171737,0.053897,0.0,0.13541,0.037001,0.46766,0.010875,0.184791,0.0,-0.0,0.591482,0.032091,-0.105098,0.095451],[-4.534701,0.0,0.0,0.0,-0.353548,-0.132264,0.01758,0.567097,-0.096806,0.154957,0.0,-0.244656,0.120726,0.0,-0.128523,0.1174,0.0,0.20392,0.289188,-0.0,0.0,0.0,0.019588,-0.027064,0.005626,-0.026062,-0.043864,0.069023,0.0,0.116674,-0.057431,0.0,-0.073093,-0.042238,0.0,-0.003972,-0.031319,0.333271,0.020488,0.160721,0.0,0.0,0.515071,0.0081,-0.065621,0.112822],[-5.052076,0.0,0.0,0.0,-0.289705,-0.183243,0.027535,0.425824,-0.081406,0.118593,0.0,-0.220426,0.097208,0.232842,-0.138849,0.173888,0.0,0.178219,0.111192,-0.0,0.0,0.0,0.010433,-0.008122,-0.019824,0.001457,-0.034423,0.054172,0.0,0.090954,-0.048761,0.232842,-0.023899,-0.029306,0.0,-0.007074,-0.006385,0.278855,0.016227,0.164169,0.0,0.0,0.451672,0.010854,-0.007837,0.129379],[-5.461034,0.0,0.0,0.0,-0.29141,-0.235251,-0.069475,0.360218,-0.147002,0.060193,0.416803,-0.262054,0.007618,0.51882,-0.211466,0.065516,0.010445,0.17068,0.050897,-0.0,0.0,0.0,0.005309,-0.004504,0.008566,-0.038124,-0.009863,0.029604,0.416803,0.067457,-0.006646,-0.114158,-0.003289,-0.069208,0.010445,-0.022799,-0.029526,0.225873,0.013711,0.135313,0.0,0.0,0.444532,0.01766,-0.000187,0.153828],[-5.859787,-0.0,0.0,0.0,-0.221554,-0.200216,-0.107622,0.298445,-0.143941,0.067705,0.331801,-0.275084,-0.016346,0.397194,-0.169606,-0.044242,0.231213,0.20266,0.050173,-0.0,0.0,0.0,-0.003163,-0.007247,0.019282,-0.023014,-0.003996,0.022606,0.190862,0.031422,-0.026505,-0.055387,-0.022142,0.016048,0.231213,-0.034684,-0.050285,0.196934,0.00941,0.144301,0.0,-0.0,0.400579,0.031555,0.045654,0.193699],[-5.706229,-0.0,0.0,0.0,-0.19175,-0.136997,-0.07929,0.209524,-0.082966,0.095371,0.418703,-0.201729,-0.036052,0.329076,-0.122703,-0.094448,0.095972,0.203739,-0.081663,-0.0,0.0,0.0,0.000121,-0.011182,0.021227,0.012836,-0.010771,0.010209,0.057134,0.012361,-0.003718,-0.0306,-0.023283,0.046026,0.095972,-0.038697,-0.000967,0.157965,0.007659,0.170738,0.0,-0.0,0.324787,0.024,0.114022,0.253512],[-4.73959,-0.0,0.0,0.0,-0.107336,-0.052408,-0.045103,0.148887,-0.070895,0.11535,0.273737,-0.123728,-0.146724,0.244253,-0.117284,-0.042462,0.09265,0.133813,-0.079412,-0.0,0.0,0.0,-0.005494,-0.015579,0.010135,0.004373,-0.006972,-0.002137,0.034962,-0.00062,0.084747,-0.037096,-0.002561,0.016583,0.09265,-0.030538,-0.003605,0.099375,0.006006,0.210739,0.0,-0.0,0.223338,0.021432,0.167809,0.353509],[-0.22723,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.597048]],"games":5000,"win":true,"opp_gain":[1.019,1.324,1.852,2.787,3.966,5.047,5.972,7.11,12.363],"win_rate":0.562};
+const VMODEL={"rounds":[[-0.996568,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-0.0,-0.0,0.0,-0.0,0.0],[-3.062911,0.0,0.0,0.0,-0.348856,-0.007705,0.158094,0.0,0.022251,0.149555,0.0,-0.037618,0.199814,0.0,-0.068258,-0.024604,0.0,0.0,0.400549,0.0,0.0,0.0,0.083391,-0.023114,0.158094,0.0,0.022251,0.149555,0.0,-0.037618,0.199814,0.0,-0.068258,-0.024604,0.0,0.0,0.400549,0.436029,0.070611,0.215031,0.122217,-0.0,0.443222,-0.016602,0.053735,0.071606],[-4.183155,0.0,0.0,0.0,-0.315787,-0.224337,0.169093,0.230204,-0.095743,0.40389,0.0,-0.26612,0.122763,-0.039395,-0.048196,0.024866,0.0,0.115674,0.47407,0.0,0.0,0.0,0.011332,0.000309,-0.09503,0.230204,-0.003779,-0.159578,0.0,-0.034943,-0.091082,-0.039395,-0.191904,0.024866,0.0,0.115674,-0.061488,0.411732,0.026311,0.203187,0.108183,-0.0,0.55098,0.056689,0.216705,0.087743],[-5.092028,0.0,0.0,0.0,-0.238128,-0.199894,0.056164,0.371191,-0.073839,0.282052,0.0,-0.273347,0.02194,0.08584,-0.146411,0.174565,0.0,0.170319,0.275111,0.0,0.0,0.0,-0.005876,-0.00576,-0.062198,0.036607,-0.019684,-0.05862,0.0,-0.003984,-0.038971,0.08584,-0.07711,-0.097215,0.0,0.001685,-0.04125,0.354069,0.014031,0.17238,0.058906,0.0,0.505563,0.052587,0.382703,0.103467],[-5.560683,0.0,0.0,0.0,-0.201906,-0.201309,-0.019581,0.450566,-0.055398,0.197972,0.0,-0.186391,0.002308,0.187478,-0.131151,0.09561,0.0,0.162502,0.142824,-0.0,0.0,0.0,-0.006947,-0.003079,-0.016604,-0.033196,-0.019485,-0.013919,0.0,-0.009692,0.000411,0.226556,-0.060633,-0.036841,0.0,-0.006603,-0.032248,0.296693,0.010649,0.140713,0.12314,0.0,0.443524,0.037461,0.303186,0.116852],[-5.792091,0.0,0.0,0.0,-0.206145,-0.208287,-0.100247,0.316929,-0.078074,0.139782,0.309423,-0.173577,-0.060893,0.335719,-0.152235,-0.016362,0.190458,0.120273,-0.001853,0.0,0.0,0.0,-0.006766,-0.004513,0.015893,-0.004207,-0.016639,-0.007651,0.309423,-0.007651,0.011182,0.009171,-0.035866,0.003809,0.190458,-0.013286,-0.015308,0.250537,0.007453,0.12017,0.166599,0.0,0.414911,0.028039,0.158258,0.135827],[-5.918871,0.0,-0.0,-0.0,-0.208504,-0.18213,-0.103636,0.250077,-0.064464,0.10957,0.378415,-0.180585,-0.084153,0.279588,-0.162794,-0.08237,0.442126,0.091388,-0.1047,0.0,0.0,0.0,-0.003471,-0.008232,0.011826,0.001077,-0.022558,-0.005525,0.100025,-0.002164,0.015779,0.003592,-0.013352,0.067766,-0.086078,-0.015181,0.005381,0.206562,0.005323,0.115154,0.188243,0.0,0.377827,0.021559,0.117641,0.167415],[-5.681703,-0.0,0.0,0.0,-0.197932,-0.151176,-0.089515,0.206254,-0.059356,0.079025,0.396866,-0.13487,-0.074017,0.229932,-0.150515,-0.016035,0.339904,0.06058,-0.121035,0.0,0.0,0.0,0.000769,-0.007868,0.003295,-0.002595,-0.016195,-0.001088,0.028265,-0.002737,0.019512,0.006175,-0.007392,0.017533,-0.072909,-0.013308,-0.000655,0.1663,0.003853,0.141836,0.199638,-0.0,0.318111,0.012415,0.178783,0.224802],[-4.635127,-0.0,0.0,0.0,-0.131768,-0.102428,-0.061227,0.136922,-0.019625,0.058881,0.241245,-0.078125,-0.015174,0.147933,-0.072362,-0.007314,0.222963,0.040625,-0.144037,0.0,-0.0,-0.0,3.7e-05,-0.007015,-0.000349,0.002461,-0.016667,0.001593,0.028534,-0.004532,-0.004742,0.008196,-0.014559,0.016955,-0.016624,-0.012396,0.013525,0.109821,0.002486,0.178225,0.386947,-0.0,0.216509,0.007896,0.353969,0.312865],[-0.790217,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.535875]],"games":5000,"win":true,"opp_gain":[0.757,0.823,1.936,2.751,3.684,4.655,6.696,8.006,12.634],"win_rate":0.558};
 // Two model kinds: VP (rounds[0..8], value = expected VP to come) and WIN (VMODEL.win, rounds[0..9],
 // value = logit of P(win) with a margin feature = my VP - best opponent's VP; rounds[9] = game end).
 const NF=1+N+N+8+1,IDX_MARGIN=NF-1,MARGIN_CLAMP=30;
@@ -344,10 +429,10 @@ function nextRoundEV(bag,droplet,flask,ctx,A,myVp){
   const b=new Brew(ctx,bag,flask,0,A);return b.V(b.start(droplet,rats));
 }
 const cost=opt=>opt.reduce((a,i)=>a+price(i),0);
-let SHOP={discount:0,max:2};
+let SHOP={discount:0,max:2,stock:null}; // stock: chips left in the box (null = unlimited)
 const price=i=>Math.max(1,PRICES[NAME(i)]-SHOP.discount);
 function purchaseOptions(coins,rnd){
-  const avail=BUYABLE.filter(i=>UNLOCK[COLOR[i]]<=rnd+1&&price(i)<=coins);
+  const avail=BUYABLE.filter(i=>UNLOCK[COLOR[i]]<=rnd+1&&price(i)<=coins&&(!SHOP.stock||SHOP.stock[i]>0));
   const opts=[[]];for(const i of avail)opts.push([i]);
   for(let a=0;a<avail.length;a++)for(let b=a+1;b<avail.length;b++){const i=avail[a],j=avail[b];
     if(COLOR[i]!==COLOR[j]&&price(i)+price(j)<=coins)opts.push([i,j]);}
@@ -376,25 +461,92 @@ function rubyAdvice(bag,rubies,rnd,droplet,flask,myVp){
   return acts;
 }
 
+
 // ============================================================ UI
 const $=sel=>document.querySelector(sel);
-const app=$("#app"),modalEl=$("#modal");
+const app=$("#app"),modalEl=$("#modal"),toastEl=$("#toast"),fabEl=$("#fab");
 const fmtBag=bag=>bag.map((n,i)=>n?NAME(i)+(n>1?"×"+n:""):"").filter(Boolean).join(" ")||"empty";
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const chipBtn=(i,extra="",cnt=null)=>`<button class="chip c-${COLOR[i]} ${extra}" data-chip="${i}" aria-label="${CNAME[COLOR[i]]} ${VALUE[i]} (${PIC[COLOR[i]]})">${VALUE[i]}${cnt!==null?`<span class="cnt">${cnt}</span>`:""}</button>`;
+const disc=(i,cls="")=>`<b class="disc c-${COLOR[i]} ${cls}">${VALUE[i]}</b>`;
+const chipName=i=>`${CNAME[COLOR[i]]} ${VALUE[i]}`;
+const plural=(n,w)=>`${n} ${w}${n===1?"":"s"}`;
+const vibe=p=>{try{if(navigator.vibrate)navigator.vibrate(p);}catch(e){}};
+let toastTimer=null;
+function toast(msg){toastEl.innerHTML=`<div class="toast">${msg}</div>`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.innerHTML="",2800);}
 
 let G=null; // game state
-function newGame(){G={round:1,bag:START_BAG(),droplet:0,vp:0,rubies:0,flask:true,nOpp:2,screen:"setup"};render();}
+function newGame(){G={round:1,bag:START_BAG(),droplet:0,vp:0,rubies:START_RUBIES,flask:true,nOpp:2,stock:initialStock(3),stockEdited:false,screen:"setup"};render();}
 
 function render(){modalEl.innerHTML="";
   if(G.screen==="setup")renderSetup();else if(G.screen==="prebrew")renderPreBrew();else if(G.screen==="brew")renderBrew();
-  else if(G.screen==="eval")renderEval();else if(G.screen==="shop")renderShop();else if(G.screen==="final")renderFinal();}
+  else if(G.screen==="eval")renderEval();else if(G.screen==="shop")renderShop();else if(G.screen==="final")renderFinal();
+  window.scrollTo(0,0);}
 
-function header(sub){return`<div class="top"><h1>Quackulator${VMODEL?(VMODEL.win?' <span class="tag" title="win-probability model loaded (trained at 4-player tables)">win</span>':' <span class="tag" title="whole-game value function loaded">v2</span>'):""}</h1><div class="sub">${sub}</div></div>`;}
+// ---------- HUD (title, round pips, resources)
+function hud(sub){
+  const badge=VMODEL?(VMODEL.win?'<span class="tag" title="win-probability model, trained at 4-player tables">win</span>':'<span class="tag">v2</span>'):"";
+  const pips=Array.from({length:ROUNDS},(_,k)=>`<i class="${k+1<G.round?"done":k+1===G.round?"now":""}" title="round ${k+1}"></i>`).join("");
+  setFab();
+  return `<div class="hud"><div class="hud-top"><h1>Quackulator${badge}</h1><div class="pips">${pips}</div></div>
+  <div class="hud-sub">${sub} · ${tot(G.bag)} chips in the bag</div>
+  <div class="hud-stats"><span>★ <b class="num">${G.vp}</b> VP</span><span>♦ <b class="num">${G.rubies}</b> rub${G.rubies===1?"y":"ies"}</span><span>💧 droplet <b class="num">${G.droplet}</b></span><span>⚗ flask <b>${G.flask?"full":"empty"}</b></span></div></div>`;}
+
+// ---------- the board: the pot spiral (0 outside, winding clockwise to the centre), shown in a popup
+const SP={W:440,R0:40,D:45,B:50,CR:19,ANCHOR:LAST}; // start radius, step along the path, radius gained per turn, cell radius; the last space (35 coins) sits at 3 o'clock
+const SPOTS=(()=>{const a=[];let th=0,r=SP.R0;for(let k=0;k<=LAST;k++){a.push({th,r});th+=SP.D/r;r=SP.R0+SP.B*th/(2*Math.PI);}
+  const rot=-a[SP.ANCHOR].th;return a.map(({th,r})=>({x:SP.W/2+r*Math.cos(th+rot),y:SP.W/2-r*Math.sin(th+rot)}));})();
+const CHIP_FILL={W:"#F7F2EA",O:"#E8862E",G:"#3C8C4C",B:"#3D63C6",R:"#C93A34",Y:"#E6B92E",P:"#7A46A8",K:"#2A2230"};
+function replayChips(chips,start){let pos=start,oranges=0;const out=[];
+  for(const i of chips){let v=VALUE[i];if(COLOR[i]==="R")v+=oranges>=3?2:(oranges>=1?1:0);pos=Math.min(pos+v,LAST);out.push({i,at:pos});if(COLOR[i]==="O")oranges++;}
+  return out;}
+function boardSVG(o){
+  const placed=o.chips||[];const at={};placed.forEach((c,k)=>at[c.at]={i:c.i,last:k===placed.length-1});
+  const rat=o.rats?Math.min(LAST,o.droplet+o.rats):-1;const scoring=o.scoring==null?-1:Math.min(LAST,o.scoring);
+  const f=n=>n.toFixed(1);let g="",marks="";
+  for(let idx=0;idx<=LAST;idx++){const{x,y}=SPOTS[idx];const[c,v,rb]=TRACK[idx];const ch=at[idx];
+    const cls=["cell",idx%2?"alt":"",idx===scoring?"score":"",idx<o.droplet?"past":""].filter(Boolean).join(" ");
+    g+=`<circle class="${cls}" cx="${f(x)}" cy="${f(y)}" r="${SP.CR}"/>`;
+    if(ch){const col=COLOR[ch.i];g+=`<circle class="chipc ${ch.last?"last"+(o.exploded?" boom":""):""}" cx="${f(x)}" cy="${f(y)}" r="${SP.CR-3}" fill="${CHIP_FILL[col]}"/><text class="dv ${col==="W"||col==="Y"?"dark":""}" x="${f(x)}" y="${f(y+4.5)}">${VALUE[ch.i]}</text>`;}
+    else g+=`<text class="idx" x="${f(x)}" y="${f(y-6.5)}">${idx}</text><text class="coin" x="${f(x)}" y="${f(y+4.5)}">${c}</text>${v?`<text class="vp" x="${f(x)}" y="${f(y+12.5)}">${v}★</text>`:""}${rb?`<rect class="rb" x="${f(x+7)}" y="${f(y-14)}" width="6" height="6" transform="rotate(45 ${f(x+10)} ${f(y-11)})"/>`:""}`;
+    if(idx===o.droplet)marks+=`<text class="mk" x="${f(x-12)}" y="${f(y+19)}">💧</text>`;
+    if(idx===rat)marks+=`<text class="mk" x="${f(x+12)}" y="${f(y+19)}">🐀</text>`;
+    if(o.tappable)g+=`<circle class="hit" cx="${f(x)}" cy="${f(y)}" r="${SP.CR+2}" fill="transparent" data-sp="${idx}"/>`;}
+  const legend=(o.center||[]).map((t,k)=>k?`<span>${t}</span>`:`<b>${t}</b>`).join(" · ");
+  return `<svg class="spiral ${o.tappable?"tap":""}" viewBox="0 0 ${SP.W} ${SP.W}">${g}${marks}</svg><div class="bl">${legend}</div>`;}
+function boardOpts(){ // what the board shows for the current screen
+  const m=G.mods||{};const d=G.droplet+(m.dropTemp?1:0);
+  if((G.screen==="brew"||G.screen==="eval"||G.screen==="final")&&G.S){const sp=G.S.pos+1,[c,v,r]=track(sp);
+    return{droplet:d,rats:G.rats,chips:replayChips(G.chips,G.start),scoring:sp,exploded:G.exploded,center:[`Space ${sp}`,`${c} coins · ${v} VP${r?" · ruby":""}`,`💧 ${d}${G.rats?` · 🐀 ${Math.min(LAST,d+G.rats)}`:""}`]};}
+  if(G.screen==="shop"&&G.shop){const dd=G.droplet+G.shop.drop;return{droplet:dd,center:[`💧 ${dd}`,G.shop.drop?`moves ${G.droplet} → ${dd}`:"stays put"]};}
+  if(G.screen==="prebrew"){const rats=ratInfo().rats;return{droplet:d,rats,tappable:true,center:[`💧 ${d}`,rats?`🐀 rat stone on ${Math.min(LAST,d+rats)}`:"no rat stone","tap your droplet's space"]};}
+  return{droplet:G.droplet,center:[`💧 ${G.droplet}`]};}
+function boardPopup(){const o=boardOpts();
+  modalEl.innerHTML=`<div class="modal center board"><div class="box">${boardSVG(o)}<div class="opts"><button class="primary" id="bclose">Close</button></div></div></div>`;
+  $("#bclose").onclick=()=>{modalEl.innerHTML="";};
+  modalEl.querySelector(".modal").onclick=e=>{if(e.target===e.currentTarget)modalEl.innerHTML="";};
+  if(o.tappable)modalEl.querySelectorAll("[data-sp]").forEach(el=>el.onclick=()=>{G.droplet=+el.dataset.sp;const fl=$("#f-leader");if(fl)G.leader=+fl.value||0;render();boardPopup();});}
+function setFab(){const s=G.screen;let t;
+  if((s==="brew"||s==="eval"||s==="final")&&G.S)t=`space <b class="num">${G.S.pos+1}</b>`;
+  else t=`💧 <b class="num">${G.droplet+((G.mods&&G.mods.dropTemp)?1:0)+(s==="shop"&&G.shop?G.shop.drop:0)}</b>`;
+  fabEl.innerHTML="🫕 "+t;}
+
+// ---------- popups (centered alerts) and bottom sheets
+function popup(o){
+  modalEl.innerHTML=`<div class="modal center ${o.cls||""}"><div class="box">${o.icon?`<div class="icon">${o.icon}</div>`:""}<h2>${o.title}</h2><div class="body">${o.body||""}</div>
+    <div class="opts">${o.buttons.map((b,k)=>`<button class="${b.cls||""}" data-pb="${k}">${b.label}</button>`).join("")}</div></div></div>`;
+  modalEl.querySelectorAll("[data-pb]").forEach(el=>el.onclick=()=>{modalEl.innerHTML="";o.buttons[+el.dataset.pb].on&&o.buttons[+el.dataset.pb].on();});}
+function modal(html){modalEl.innerHTML=`<div class="modal"><div class="box">${html}</div></div>`;}
+const rulesList=items=>`<ul>${items.map(t=>`<li>${t}</li>`).join("")}</ul>`;
 
 // ---------- setup
+function stockEditor(){
+  return `<div class="bagedit">${BUYABLE.map(i=>`<div class="be ${G.stock[i]?"":"out"}">${chipBtn(i)}<b id="sc-${i}" class="num">${G.stock[i]||"out"}</b><button class="tiny" data-sdec="${i}">−</button><button class="tiny" data-sinc="${i}">+</button></div>`).join("")}</div>`;}
+function bindStock(after){
+  app.querySelectorAll("[data-sdec]").forEach(b=>b.onclick=()=>{const i=+b.dataset.sdec;if(G.stock[i]>0)G.stock[i]--;G.stockEdited=true;after(i);});
+  app.querySelectorAll("[data-sinc]").forEach(b=>b.onclick=()=>{const i=+b.dataset.sinc;G.stock[i]++;G.stockEdited=true;after(i);});}
 function renderSetup(){
-  app.innerHTML=header("Set up")+`
+  app.innerHTML=hud("Set up")+`
   <div class="card"><h2>Where are you?</h2>
     <div class="row">
       <label class="f grow">Round<input type="number" id="f-round" min="1" max="9" value="${G.round}"></label>
@@ -407,48 +559,56 @@ function renderSetup(){
       <label class="f grow">Flask<select id="f-flask"><option value="1"${G.flask?" selected":""}>full</option><option value="0"${!G.flask?" selected":""}>empty</option></select></label>
     </div>
   </div>
-  <div class="card"><h2>Your bag</h2><div class="muted" style="margin-bottom:8px">New game = 4 white 1s, 2 white 2s, 1 white 3, 1 orange, 1 green.</div>
-    <div class="bagedit">${CHIPS.map((c,i)=>`<div class="be">${chipBtn(i)}<b id="bc-${i}">${G.bag[i]}</b><button class="small" data-dec="${i}">−</button><button class="small" data-inc="${i}">+</button></div>`).join("")}</div>
+  <div class="card"><h2>Your bag</h2>
+    <div class="bagedit">${CHIPS.map((c,i)=>`<div class="be">${chipBtn(i)}<b id="bc-${i}" class="num">${G.bag[i]}</b><button class="tiny" data-dec="${i}">−</button><button class="tiny" data-inc="${i}">+</button></div>`).join("")}</div>
   </div>
+  <details class="card"><summary>Chip supply <span class="muted">edit if chips were already bought</span></summary>
+    <div class="muted" style="margin:8px 0">Left in the box. Knock off anything already bought.</div>${stockEditor()}</details>
   <div class="bar"><div class="in"><button class="primary" id="go">Start round ${G.round}</button></div></div>`;
   app.querySelectorAll("[data-inc]").forEach(b=>b.onclick=()=>{G.bag[+b.dataset.inc]++;$("#bc-"+b.dataset.inc).textContent=G.bag[+b.dataset.inc];});
   app.querySelectorAll("[data-dec]").forEach(b=>b.onclick=()=>{const i=+b.dataset.dec;if(G.bag[i]>0)G.bag[i]--;$("#bc-"+i).textContent=G.bag[i];});
+  bindStock(i=>{const el=$("#sc-"+i);el.textContent=G.stock[i]||"out";el.parentElement.classList.toggle("out",!G.stock[i]);});
+  $("#f-opp").onchange=()=>{if(!G.stockEdited){G.stock=initialStock(+$("#f-opp").value+1);renderSetup();}};
   $("#go").onclick=()=>{G.round=Math.max(1,Math.min(9,+$("#f-round").value||1));G.droplet=+$("#f-drop").value||0;G.vp=+$("#f-vp").value||0;G.rubies=+$("#f-rub").value||0;
     G.nOpp=+$("#f-opp").value;G.flask=$("#f-flask").value==="1";G.startedRound=G.round;G.screen="prebrew";render();};
 }
 
-// ---------- pre-brew: fortune card + leader
+// ---------- pre-brew: round checklist, fortune card, rat tails, droplet position
+function ratInfo(){const m=G.mods,leader=G.leader??OPP.leader_vp[G.round];
+  const tails=G.round>=2?RAT_TAIL_VP.filter(t=>G.vp<t&&t<leader):[];
+  const rats=Math.max(0,tails.length*m.ratsMult+m.ratsExtra);return{leader,tails,rats};}
 function renderPreBrew(){
   if(G.round===EXTRA_WHITE_ROUND&&G.round!==G.startedRound&&!G.extraWhiteDone){G.bag[IDX.W1]++;G.extraWhiteDone=true;}
   G.mods=G.mods||{limit:7,dropTemp:0,ratsExtra:0,ratsMult:1,both:false,novp:0,noruby:0,discount:0,maxBuy:2,delta:new Array(N).fill(0),target:0};const m=G.mods;
-  const leaderDefault=OPP.leader_vp[G.round];
-  const lastShop=G.lastShop||{};
-  app.innerHTML=header(`Round ${G.round} · before brewing`)+`
-  ${G.round===EXTRA_WHITE_ROUND&&G.round!==G.startedRound?`<div class="card muted">Round 6: a white 1 was added to your bag.</div>`:""}
+  const ri=ratInfo();const lastShop=G.lastShop||{};
+  const start=Math.min(LAST,G.droplet+(m.dropTemp?1:0)+ri.rats);
+  app.innerHTML=hud(`Round ${G.round} · before brewing`)+`
   ${lastShop.text?`<div class="card muted">Last shop: ${lastShop.text}</div>`:""}
-  <div class="card"><h2>1 · Fortune teller card</h2><div class="muted" style="margin-bottom:8px">Read the card, then set whatever it changes. Nothing on it? Skip to step 2.</div>
-    <div class="modrows">
+  ${G.round===EXTRA_WHITE_ROUND&&G.round!==G.startedRound?`<div class="card muted">White 1 added to your bag (round 6).</div>`:""}
+  <div class="card"><h2>Positions</h2>
+    <div class="row"><label class="f grow need">Droplet space<input type="number" id="f-drop2" min="0" value="${G.droplet}"></label>
+    ${G.round>=2?`<label class="f grow need">${VMODEL&&VMODEL.win?"Best opponent's VP":"Leader's VP"}<input type="number" id="f-leader" value="${ri.leader}"></label>`:""}
+    ${G.round===ROUNDS?`<label class="f grow">Score to beat<input type="number" id="f-target" min="0" placeholder="optional" value="${m.target||""}"></label>`:""}</div>
+    ${G.round>=2?`<div style="margin-top:10px">🐀 <b>${plural(ri.rats,"rat tail")}</b> <span class="muted">(you ${G.vp}, best opponent ${ri.leader})</span>${ri.rats?` · rat stone on <b>space ${start}</b>`:""}
+      <span class="mods" style="margin-top:6px"><button class="tiny" id="ratminus">−</button><b class="num" style="min-width:24px;text-align:center">${ri.rats}</b><button class="tiny" id="ratplus">+</button><button class="small ${m.ratsMult===0?"on":""}" data-rats="0">No rats this round</button><button class="small ${m.ratsMult===2?"on":""}" data-rats="2">Double</button></span></div>`:""}
+  </div>
+  <details class="card"><summary>Fortune teller card <span class="muted">${fortuneSummary(m)}</span></summary>
+    <div class="modrows" style="margin-top:8px">
       <div class="mr"><span>Pot explodes above</span><span class="mods">${[7,8,9].map(v=>`<button class="small ${m.limit===v?"on":""}" data-limit="${v}">${v}</button>`).join("")}</span></div>
       <div class="mr"><span>Droplet +1 this round only</span><button class="small ${m.dropTemp?"on":""}" data-tog="dropTemp">${m.dropTemp?"Yes":"No"}</button></div>
       <div class="mr"><span>Exploded pots keep coins <i>and</i> VP</span><button class="small ${m.both?"on":""}" data-tog="both">${m.both?"Yes":"No"}</button></div>
       <div class="mr"><span>Bonus if you don't explode</span><span class="mods"><button class="small ${m.novp===1?"on":""}" data-novp="1">+1 VP</button><button class="small ${m.novp===2?"on":""}" data-novp="2">+2 VP</button><button class="small ${m.noruby?"on":""}" data-tog="noruby">+1 ruby</button></span></div>
-      ${G.round>=2?`<div class="mr"><span>Rat tails</span><span class="mods"><button class="small ${m.ratsMult===0?"on":""}" data-rats="0">None this round</button><button class="small ${m.ratsMult===2?"on":""}" data-rats="2">Double</button><button class="small" id="ratminus">−1</button><b class="num">${m.ratsExtra>=0?"+":""}${m.ratsExtra}</b><button class="small" id="ratplus">+1</button></span></div>`:""}
       <div class="mr"><span>Shop this round</span><span class="mods"><button class="small ${m.discount===1?"on":""}" data-disc="1">1 coin off</button><button class="small ${m.discount===2?"on":""}" data-disc="2">2 off</button><button class="small ${m.maxBuy===3?"on":""}" data-tog3="maxBuy">Buy 3 chips</button></span></div>
     </div>
-    <div class="muted" style="margin:10px 0 6px">Chips in or out of the bag <b>for this round only</b> (e.g. "set aside one white 1"):</div>
-    <div class="bagedit">${CHIPS.map((c,i)=>(G.bag[i]||m.delta[i]>0)?`<div class="be">${chipBtn(i)}<b id="dl-${i}" class="num">${m.delta[i]>0?"+":""}${m.delta[i]}</b><button class="small" data-ddec="${i}">−</button><button class="small" data-dinc="${i}">+</button></div>`:"").join("")}</div>
-    <div class="muted" style="margin:10px 0 6px">"Everyone receives…" cards — these are permanent:</div>
+    <div class="muted" style="margin:10px 0 6px">Bag changes <b>for this round only</b>:</div>
+    <div class="bagedit">${CHIPS.map((c,i)=>(G.bag[i]||m.delta[i]>0)?`<div class="be">${chipBtn(i)}<b id="dl-${i}" class="num">${m.delta[i]>0?"+":""}${m.delta[i]}</b><button class="tiny" data-ddec="${i}">−</button><button class="tiny" data-dinc="${i}">+</button></div>`:"").join("")}</div>
+    <div class="muted" style="margin:10px 0 6px">Permanent ("everyone receives…"):</div>
     <div class="mods"><button class="small" id="g-orange">+1 orange to bag</button><button class="small" id="g-white">+1 white 1 to bag</button><button class="small" id="g-ruby">+1 ruby</button><button class="small" id="g-vp">+1 VP</button><button class="small" id="g-drop">Droplet +1 (permanent)</button></div>
-    <div class="muted" style="margin-top:6px">A card that lets you place a chip in the pot before drawing: just tap that chip first on the next screen.</div>
-  </div>
-  <div class="card"><h2>2 · Positions</h2>
-    <div class="row"><label class="f grow">Droplet space<input type="number" id="f-drop2" min="0" value="${G.droplet}"></label>
-    ${G.round>=2?`<label class="f grow">${VMODEL&&VMODEL.win?"Best opponent's VP":"Leader's VP"}<input type="number" id="f-leader" value="${G.leader??leaderDefault}"></label>`:""}
-    ${G.round===ROUNDS?`<label class="f grow">Score to beat<input type="number" id="f-target" min="0" placeholder="optional" value="${m.target||""}"></label>`:""}</div>
-    <div class="muted" style="margin-top:6px">Your VP: ${G.vp} · rubies ${G.rubies} · flask ${G.flask?"full":"empty"}.${G.round>=2?" Rat tails between you and the leader are added to your starting space.":""}${G.round===ROUNDS?" With a score to beat, the last round maximises your chance of reaching it instead of your average score.":""}</div>
-    <div class="muted" style="margin-top:6px">Bag: ${fmtBag(G.bag)}</div></div>
-  <div class="bar"><div class="in"><button class="ghost" id="back">Edit setup</button><button class="primary" id="go">Start brewing</button></div></div>`;
+  </details>
+  <div class="card muted">Bag: ${fmtBag(G.bag)} · flask ${G.flask?"full":"empty"} · ${G.rubies} rub${G.rubies===1?"y":"ies"}</div>
+  <div class="bar"><div class="in"><button class="ghost" id="back">Setup</button><button class="primary" id="go">Start brewing</button></div></div>`;
   const rr=()=>{m.target=+($("#f-target")?.value||0);G.droplet=Math.max(0,+$("#f-drop2").value||0);if($("#f-leader"))G.leader=+$("#f-leader").value||0;render();};
+  $("#f-drop2").onchange=rr;const fl=$("#f-leader");if(fl)fl.onchange=rr;
   app.querySelectorAll("[data-limit]").forEach(b=>b.onclick=()=>{m.limit=+b.dataset.limit;rr();});
   app.querySelectorAll("[data-tog]").forEach(b=>b.onclick=()=>{m[b.dataset.tog]=m[b.dataset.tog]?0:1;rr();});
   app.querySelectorAll("[data-tog3]").forEach(b=>b.onclick=()=>{m.maxBuy=m.maxBuy===3?2:3;rr();});
@@ -462,17 +622,30 @@ function renderPreBrew(){
   $("#g-ruby").onclick=()=>{G.rubies++;rr();};$("#g-vp").onclick=()=>{G.vp++;rr();};$("#g-drop").onclick=()=>{G.droplet++;rr();};
   $("#back").onclick=()=>{G.screen="setup";render();};
   $("#go").onclick=()=>{m.target=+($("#f-target")?.value||0);G.droplet=Math.max(0,+$("#f-drop2").value||0);G.leader=G.round>=2?(+$("#f-leader").value||0):0;startBrew();};
+  if(G.round>=2&&G.promptedRound!==G.round)roundPrompt();
 }
+// round-start prompt for the inputs the solver needs most: best opponent's VP, droplet space, rat tails
+function roundPrompt(){const m=G.mods;const ri=ratInfo();
+  modalEl.innerHTML=`<div class="modal center go"><div class="box prompt"><div class="icon">🧪</div><h2>Round ${G.round}</h2>
+    <div class="row" style="margin-top:8px"><label class="f grow need">Best opponent's VP<input type="number" id="p-leader" value="${ri.leader}"></label><label class="f grow">Your droplet space<input type="number" id="p-drop" min="0" value="${G.droplet}"></label></div>
+    <div class="row" style="justify-content:center;margin-top:14px;gap:8px"><span>🐀 rat tails</span><button class="tiny" id="p-rm">−</button><b class="num" id="p-rats" style="min-width:24px;font-size:20px">${ri.rats}</b><button class="tiny" id="p-rp">+</button></div>
+    <div class="opts"><button class="primary" id="p-go">Set</button></div></div></div>`;
+  const upd=()=>{G.leader=+$("#p-leader").value||0;$("#p-rats").textContent=ratInfo().rats;};
+  $("#p-leader").oninput=upd;
+  $("#p-rm").onclick=()=>{if(ratInfo().rats>0)m.ratsExtra--;upd();};$("#p-rp").onclick=()=>{m.ratsExtra++;upd();};
+  $("#p-go").onclick=()=>{upd();G.droplet=Math.max(0,+$("#p-drop").value||0);G.promptedRound=G.round;render();};
+  $("#p-leader").focus();$("#p-leader").select();}
+function fortuneSummary(m){const p=[];if(m.limit!==7)p.push(`explode >${m.limit}`);if(m.dropTemp)p.push("droplet +1");if(m.both)p.push("keep both");if(m.novp)p.push(`+${m.novp} VP safe`);if(m.noruby)p.push("+ruby safe");if(m.discount)p.push(`${m.discount} off`);if(m.maxBuy===3)p.push("buy 3");if(m.delta.some(x=>x))p.push("bag changed");return p.length?p.join(", "):"nothing set";}
 
 function startBrew(){
-  const m=G.mods;let rats=G.round>=2?rat_tails(G.vp,G.leader):0;rats=Math.max(0,rats*m.ratsMult+m.ratsExtra);
-  SHOP={discount:m.discount,max:m.maxBuy};
+  const m=G.mods;const rats=ratInfo().rats;
+  SHOP={discount:m.discount,max:m.maxBuy,stock:G.stock};
   G.ctx=new Ctx(G.round,{limit:m.limit,n_opp:G.nOpp,both:!!m.both,novp:m.novp,noruby:m.noruby,target:G.round===ROUNDS?m.target:0,baseVp:G.vp,baseRubies:G.rubies});
   const bag=G.bag.map((n,i)=>Math.max(0,n+m.delta[i]));
   if(VMODEL&&!G.ctx.target)G.ctx.pay=new PayTable(G.bag,G.round,G.droplet,G.rubies,G.flask,G.round>=2?G.vp-G.leader:0);
   G.brew=new Brew(G.ctx,bag,G.flask,tot(bag)>=22?1:2);
-  G.verdictKey=null;
-  G.S=G.brew.start(G.droplet+(m.dropTemp?1:0),rats);G.rats=rats;G.hist=[];G.log=[];G.exploded=false;
+  G.verdictKey=null;G.start=G.droplet+(m.dropTemp?1:0)+rats;
+  G.S=G.brew.start(G.droplet+(m.dropTemp?1:0),rats);G.rats=rats;G.hist=[];G.log=[];G.chips=[];G.exploded=false;
   G.screen="brew";render();
 }
 
@@ -481,28 +654,22 @@ function renderBrew(){
   const s=G.S,b=G.brew,ctx=G.ctx;
   const k=skey(s);
   if(!G.exploded&&tot(s.bag)&&G.verdictKey!==k){ // solve off the render path so the tap registers first
-    app.innerHTML=header(`Round ${G.round} · brewing`)+`<div class="verdict"><div class="word">…</div><div class="why">Working out the odds</div></div>`;
+    app.innerHTML=hud(`Round ${G.round} · brewing`)+`<div class="verdict"><div class="word">…</div><div class="why">Working out the odds</div></div>`;
     setTimeout(()=>{G.verdict=b.shouldDraw(s);G.verdictKey=k;renderBrew();},20);return;}
   const[draw,stop,dv]=G.exploded||!tot(s.bag)?[false,0,null]:G.verdict;
   const pe=b.explodeProb(s);const space=s.pos+1;const[coins,vp,ruby]=track(space);
   const empty=tot(s.bag)===0;
+  const bombs=`<span class="bombs">${Array.from({length:ctx.limit},(_,i)=>`<i class="${i<s.white?"on":""}"></i>`).join("")}</span>`;
   let verdict;
-  if(G.exploded)verdict=`<div class="verdict boom"><div class="word">BOOM</div><div class="why">Pot exploded at space ${space}. Head to scoring.</div></div>`;
+  if(G.exploded)verdict=`<div class="verdict boom"><div class="word">BOOM</div><div class="why">Pot exploded at space ${space} with ${s.white} bombs. Head to scoring.</div></div>`;
   else if(empty)verdict=`<div class="verdict stop"><div class="word">STOP</div><div class="why">Bag is empty.</div></div>`;
   else verdict=`<div class="verdict ${draw?"draw":"stop"}"><div class="word">${draw?"DRAW":"STOP"}</div>
     <div class="why">${whyVerdict(s,draw,stop,dv,pe)}</div>
-    <div class="stats"><span>Explode next draw <b class="num">${Math.round(pe*100)}%</b></span>${ctx.target?`<span>Reach ${ctx.target} if you stop <b class="num">${Math.round(stop*100)}%</b></span><span>if you draw <b class="num">${Math.round(dv*100)}%</b></span>`:`<span>Stop <b class="num">${stop.toFixed(1)}</b></span><span>Draw <b class="num">${dv.toFixed(1)}</b></span>`}</div></div>`;
-  const bombs=Array.from({length:ctx.limit},(_,i)=>`<i class="${i<s.white?"on":""}"></i>`).join("");
-  app.innerHTML=header(`Round ${G.round} · brewing`)+verdict+`
-  <div class="status">
-    <div class="stat"><div class="k">Space</div><div class="v num">${space}</div></div>
-    <div class="stat"><div class="k">Coins</div><div class="v num">${coins}</div></div>
-    <div class="stat"><div class="k">VP</div><div class="v num">${vp}${ruby?" ♦":""}</div></div>
-    <div class="stat"><div class="k">Bombs ${s.white}/${ctx.limit}</div><div class="bombs">${bombs}</div></div>
-  </div>
+    <div class="stats"><span>Bombs <b class="num">${s.white}/${ctx.limit}</b>${bombs}</span><span>Explode next draw <b class="num">${Math.round(pe*100)}%</b></span>${ctx.target?`<span>Reach ${ctx.target}: stop <b class="num">${Math.round(stop*100)}%</b> · draw <b class="num">${Math.round(dv*100)}%</b></span>`:ctx.pay&&ctx.pay.win?`<span>Win chance: stop <b class="num">${(stop*100).toFixed(1)}%</b> · draw <b class="num">${(dv*100).toFixed(1)}%</b></span>`:`<span>Stop <b class="num">${stop.toFixed(1)}</b> · draw <b class="num">${dv.toFixed(1)}</b></span>`}</div></div>`;
+  app.innerHTML=hud(`Round ${G.round} · brewing`)+verdict+`
   <div class="card"><h2>${G.exploded?"Chips drawn":"Tap the chip you drew"}</h2>
     <div class="chips">${CHIPS.map((c,i)=>s.bag[i]?chipBtn(i,"",s.bag[i]):"").join("")}</div>
-    <div class="legend">${tot(s.bag)} chips left · flask ${s.flask?"ready":"used"} · start: droplet ${G.droplet}${G.mods.dropTemp?" +1 (card)":""}${G.rats?` + ${G.rats} rat tail${G.rats>1?"s":""}`:""} = space ${G.droplet+(G.mods.dropTemp?1:0)+G.rats}</div>
+    <div class="legend">${tot(s.bag)} chips left in the bag · flask ${s.flask?"ready":"used"} · space ${space} pays ${coins} coins, ${vp} VP${ruby?" + ruby":""}</div>
     ${G.log.length?`<div class="log">${G.log.map(esc).join("<br>")}</div>`:""}
   </div>
   <div class="bar"><div class="in">
@@ -510,7 +677,7 @@ function renderBrew(){
     ${G.exploded||empty?`<button class="primary" id="score">Score the round</button>`:`<button class="stop" id="stopb">Stop &amp; score</button>`}
   </div></div>`;
   if(!G.exploded)app.querySelectorAll(".chips .chip").forEach(el=>el.onclick=()=>onChip(+el.dataset.chip));
-  $("#undo").onclick=()=>{const h=G.hist.pop();G.S=h.S;G.exploded=false;G.log=h.log;render();};
+  $("#undo").onclick=()=>{const h=G.hist.pop();G.S=h.S;G.exploded=false;G.log=h.log;G.chips=h.chips;render();};
   const sc=$("#score")||$("#stopb");sc.onclick=()=>{G.screen="eval";render();};
 }
 
@@ -520,58 +687,59 @@ function whyVerdict(s,draw,stop,dv,pe){
     if(draw)return need<=0?`You'd already reach ${ctx.target} by stopping, but drawing keeps that chance and adds insurance — no white left can hurt you enough.`:`Stopping now leaves you ${need} short of ${ctx.target}. Drawing risks a ${Math.round(pe*100)}% explosion but is the only way to get there.`;
     return need<=0?`Stopping here reaches ${ctx.target} (space ${space}: ${vp} VP + ${Math.floor(coins/5)} from coins). Drawing only adds a ${Math.round(pe*100)}% chance of throwing it away.`:`You're ${need} short and drawing doesn't improve the odds enough — take the sure result.`;}
   const safe=n-[1,2,3].reduce((a,v)=>a+s.bag[I_W[v]],0);const okWhite=[1,2,3].filter(v=>s.white+v<=ctx.limit).reduce((a,v)=>a+s.bag[I_W[v]],0);
-  const boomVal=Math.max(vp,coins*ctx.w_coin);const keep=vp>=coins*ctx.w_coin?`${vp} VP`:`${coins} coins`;
-  const gain=(dv-stop).toFixed(1);
+  const keep=vp>=coins*ctx.w_coin?`${vp} VP`:`${coins} coins`;
+  const win=ctx.pay&&ctx.pay.win;const gain=win?`${(100*(dv-stop)).toFixed(1)} points of win chance`:`${(dv-stop).toFixed(1)}`;const loss=win?`${(100*(stop-dv)).toFixed(1)} points of win chance`:`${(stop-dv).toFixed(1)}`;
   if(draw){
     if(pe===0)return `No bomb can blow you up on this draw (${okWhite} safe white${okWhite===1?"":"s"}, ${safe} coloured). Nothing to lose.`;
     return `${Math.round(pe*100)}% chance to explode, but even then you'd keep ${keep} from space ${space}. The other ${n-Math.round(pe*n)} chips push you further — worth ~${gain} more than stopping.`;
   }
-  return `Space ${space} already pays ${coins} coins and ${vp} VP${ctx.pWinDie(space)>0.5?" with a good shot at the bonus die":""}. A ${Math.round(pe*100)}% bomb risk would cost that${G.round===ROUNDS?"":" and the shop"}; the safe chips left don't add enough to justify it (~${(stop-dv).toFixed(1)} in favour of stopping).`;
+  return `Space ${space} already pays ${coins} coins and ${vp} VP${ctx.pWinDie(space)>0.5?" with a good shot at the bonus die":""}. A ${Math.round(pe*100)}% bomb risk would cost that${G.round===ROUNDS?"":" and the shop"}; the safe chips left don't add enough to justify it (~${loss} in favour of stopping).`;
 }
 
-function pushHist(){G.hist.push({S:G.S,log:G.log.slice()});}
+function pushHist(){G.hist.push({S:G.S,log:G.log.slice(),chips:G.chips.slice()});}
 
 function onChip(i){
   const b=G.brew,sb=G.S,ctx=G.ctx;const s=S(rm(sb.bag,i),sb.pos,sb.white,sb.lastw,sb.g1,sb.g2,sb.flask);const c=COLOR[i];
   const[s2,boom]=b.placed(s,i);
   pushHist();
   if(c==="W"){
-    if(boom){G.S=s2;G.exploded=true;G.log.push(`Drew ${NAME(i)} — exploded`);render();return;}
+    if(boom){G.S=s2;G.chips.push(i);G.exploded=true;G.log.push(`Drew ${NAME(i)} — exploded`);render();vibe([90,60,250]);
+      const[coins,vp]=track(s2.pos+1);
+      popup({cls:"boom",icon:"💥",title:"BOOM!",body:`Exploded on <b>space ${s2.pos+1}</b> with ${s2.white} bombs. Coins <b>or</b> VP, no bonus die.`,
+        buttons:[{label:"Score the round",cls:"primary",on:()=>{G.screen="eval";render();}},{label:"Wait, undo that",on:()=>{const h=G.hist.pop();G.S=h.S;G.exploded=false;G.log=h.log;G.chips=h.chips;render();}}]});return;}
     if(sb.flask){const keep=b.V(s2),ret=b.V(b.useFlask(sb));
-      if(ret>keep){G.log.push(`Drew ${NAME(i)}`);G.S=s2;render();
-        modal(`<h2>Use the flask?</h2><div class="muted">Returning this white ${VALUE[i]} drops your bombs from ${s2.white} back to ${sb.white} of ${ctx.limit}, so you can keep drawing with far less risk. It costs the flask (2 rubies to refill). Keep ${keep.toFixed(2)} vs return ${ret.toFixed(2)}.</div>
-          <div class="opts"><button class="opt best" id="m-yes">Use flask — return it<span class="tag">Best</span></button><button class="opt" id="m-no">Keep it in the pot</button></div>`);
-        $("#m-yes").onclick=()=>{G.S=b.useFlask(sb);G.log.push("Flask: returned "+NAME(i));render();};
-        $("#m-no").onclick=()=>{render();};return;}}
-    G.S=s2;G.log.push(`Drew ${NAME(i)}`);render();return;
+      if(ret>keep){G.log.push(`Drew ${NAME(i)}`);G.S=s2;G.chips.push(i);render();vibe(60);
+        popup({cls:"stop",icon:"⚗️",title:"Use the flask!",body:`Put this <b>white ${VALUE[i]}</b> back in the bag and flip your flask to empty. Your bombs drop from ${s2.white} back to ${sb.white} of ${ctx.limit}, so you can keep drawing with far less risk.<div class="muted" style="margin-top:6px">Keep it ${keep.toFixed(2)} vs return it ${ret.toFixed(2)}. Refilling the flask costs 2 rubies at the end of a round.</div>`,
+          buttons:[{label:"Returned it — flask is empty",cls:"primary",on:()=>{G.S=b.useFlask(sb);G.chips.pop();G.log.push("Flask: returned "+NAME(i));render();}},{label:"Keep it in the pot",on:()=>render()}]});return;}}
+    G.S=s2;G.chips.push(i);G.log.push(`Drew ${NAME(i)}`);render();return;
   }
-  if(c==="Y"&&s.lastw){const[s3]=b.placed(s,i,true);const keep=b.V(s2),ret=b.V(s3);G.S=s2;G.log.push(`Drew ${NAME(i)}`);render();
-    modal(`<h2>Mandrake</h2><div class="muted">The chip before it was a white ${s.lastw}. Returning it lowers your bombs from ${s.white} to ${s.white-s.lastw} and you lose only ${s.lastw} space${s.lastw>1?"s":""}. Keep ${keep.toFixed(2)} vs return ${ret.toFixed(2)}.</div>
-      <div class="opts"><button class="opt ${ret>keep?"best":""}" id="m-yes">Return the cherry bomb${ret>keep?'<span class="tag">Best</span>':""}</button><button class="opt ${ret>keep?"":"best"}" id="m-no">Keep it${ret>keep?"":'<span class="tag">Best</span>'}</button></div>`);
-    $("#m-yes").onclick=()=>{G.S=s3;G.log.push("Mandrake: returned W"+s.lastw);render();};$("#m-no").onclick=()=>render();return;}
-  if(c==="B"){G.S=s2;G.log.push(`Drew ${NAME(i)}`);render();blueModal(s2,Math.min(VALUE[i],tot(s2.bag)));return;}
-  G.S=s2;G.log.push(`Drew ${NAME(i)}`);render();
+  if(c==="Y"&&s.lastw){const[s3]=b.placed(s,i,true);const keep=b.V(s2),ret=b.V(s3);G.S=s2;G.chips.push(i);G.log.push(`Drew ${NAME(i)}`);render();vibe(60);
+    const doRet=()=>{G.S=s3;G.chips.splice(G.chips.length-2,1);G.log.push("Mandrake: returned W"+s.lastw);render();};
+    popup({cls:"stop",icon:"🌱",title:"Mandrake!",body:`The chip before it was a <b>white ${s.lastw}</b>. You may put that white back in the bag; the mandrake takes its spot. Bombs ${s.white} → ${s.white-s.lastw}, you lose only ${plural(s.lastw,"space")}.<div class="muted" style="margin-top:6px">Keep ${keep.toFixed(2)} vs return ${ret.toFixed(2)}.</div>`,
+      buttons:[{label:`Return the white ${s.lastw}${ret>keep?" ✓ best":""}`,cls:ret>keep?"primary":"",on:doRet},{label:`Keep it${ret>keep?"":" ✓ best"}`,cls:ret>keep?"":"primary",on:()=>render()}]});return;}
+  if(c==="B"){G.S=s2;G.chips.push(i);G.log.push(`Drew ${NAME(i)}`);render();const k=Math.min(VALUE[i],tot(s2.bag));if(k===0)return;vibe([70,50,70,50,70]);
+    popup({cls:"stop",icon:"✋",title:"STOP!",body:`Pull <b>${k} more chip${k>1?"s":""}</b> and look. Place one or none; the rest go back.`,
+      buttons:[{label:`I've pulled ${k} — show me`,cls:"primary",on:()=>blueModal(s2,k)}]});return;}
+  G.S=s2;G.chips.push(i);G.log.push(`Drew ${NAME(i)}`);render();
 }
 
 function blueModal(s2,k){
   if(k===0)return;const picked=[];
   const draw=()=>{const left=s2.bag.slice();for(const j of picked)left[j]--;
-    modal(`<h2>Crow skull: draw ${k}</h2><div class="muted">Tap the ${k} chip${k>1?"s":""} you pulled out (${picked.length}/${k}).</div>
+    modal(`<h2>Crow skull: which ${k} did you pull?</h2><div class="muted">Tap them in any order (${picked.length}/${k}).</div>
       <div class="chips" style="margin-top:10px">${CHIPS.map((c,i)=>left[i]?chipBtn(i,"",left[i]):"").join("")}</div>
-      <div class="row" style="margin-top:10px">${picked.map((j,n)=>`<span class="chip c-${COLOR[j]}" style="width:40px;height:40px;aspect-ratio:auto;font-size:16px">${VALUE[j]}</span>`).join("")}
+      <div class="row" style="margin-top:10px"><span class="pick">${picked.map(j=>disc(j)).join("")}</span>
       <span class="grow"></span><button class="small" id="m-clear">Clear</button></div>`);
     modalEl.querySelectorAll(".chips .chip").forEach(el=>el.onclick=()=>{picked.push(+el.dataset.chip);if(picked.length===k)choose();else draw();});
     $("#m-clear").onclick=()=>{picked.length=0;draw();};};
   const choose=()=>{const vals=G.brew.bluePickValues(s2,picked);const entries=Object.entries(vals).sort((a,b)=>b[1]-a[1]);const best=entries[0][0];
-    modal(`<h2>Place which one?</h2><div class="opts">${entries.map(([j,v])=>`<button class="opt ${j===best?"best":""}" data-pick="${j}"><span>${j==="none"?"None — put them all back":"Place "+CNAME[COLOR[+j]]+" "+VALUE[+j]+(COLOR[+j]==="W"?" (adds "+VALUE[+j]+" bomb"+(VALUE[+j]>1?"s":"")+")":"")}${j===best?'<span class="tag">Best</span>':""}</span><span class="ev num">${v.toFixed(2)}</span></button>`).join("")}</div>`);
+    modal(`<h2>Place which one?</h2><div class="muted">The others go back in the bag.</div><div class="opts">${entries.map(([j,v])=>`<button class="opt ${j===best?"best":""}" data-pick="${j}"><span>${j==="none"?"None — put them all back":`${disc(+j)} Place ${chipName(+j)}${COLOR[+j]==="W"?" (+"+VALUE[+j]+" bomb"+(VALUE[+j]>1?"s":"")+")":""}`}${j===best?'<span class="tag">Best</span>':""}</span><span class="ev num">${v.toFixed(2)}</span></button>`).join("")}</div>`);
     modalEl.querySelectorAll("[data-pick]").forEach(el=>el.onclick=()=>{const j=el.dataset.pick;modalEl.innerHTML="";
       if(j==="none"){G.log.push("Crow skull: placed nothing");render();return;}
       G.hist.pop(); // the blue draw and its pick count as one undo step
       onChip(+j);});};
   draw();
 }
-
-function modal(html){modalEl.innerHTML=`<div class="modal"><div class="box">${html}</div></div>`;}
 
 // ---------- evaluation
 function renderEval(){
@@ -581,13 +749,13 @@ function renderEval(){
   G.ev=G.ev||{takeVp:takeVpRec,die:"none",moth:"droplet"};const e=G.ev;
   const pdie=Math.round(100*ctx.pWinDie(space));
   let purpleTxt="";if(purples>=3)purpleTxt="+2 VP, droplet +1";else if(purples===2)purpleTxt="+1 VP, +1 ruby";else if(purples===1)purpleTxt="+1 VP";
-  app.innerHTML=header(`Round ${G.round} · scoring`)+`
-  <div class="card"><h2>${G.exploded?"Exploded at":"Stopped at"} space ${space}</h2>
-    <div class="kv"><span>Coins</span><b class="num">${coins}</b><span>Victory points</span><b class="num">${vp}</b><span>Ruby on this space</span><b>${ruby?"yes":"no"}</b>
+  app.innerHTML=hud(`Round ${G.round} · scoring`)+`
+  <div class="card"><h2>${G.exploded?"💥 Exploded at":"Stopped at"} space ${space}</h2>
+    <div class="kv"><span>Coins</span><b class="num">${coins}</b><span>Victory points</span><b class="num">${vp}</b><span>Ruby on this space</span><b>${ruby?"yes ♦":"no"}</b>
     ${greens?`<span>Green in the last two chips</span><b>+${greens} ruby</b>`:""}${purples?`<span>Purple ×${purples}</span><b>${purpleTxt}</b>`:""}</div></div>
-  ${G.exploded&&!ctx.both?`<div class="card"><h2>You can keep VP or coins</h2><div class="muted">${vp} VP vs ${coins} coins (worth ~${(coins*ctx.w_coin).toFixed(1)} VP now)</div>
-    <div class="opts"><button class="opt ${e.takeVp?"best":""}" data-take="vp">Take the ${vp} VP${takeVpRec?'<span class="tag">Best</span>':""}</button><button class="opt ${!e.takeVp?"best":""}" data-take="coins">Take the ${coins} coins${!takeVpRec?'<span class="tag">Best</span>':""}</button></div></div>`:""}
-  ${!G.exploded?`<div class="card"><h2>Bonus die</h2><div class="muted">You roll it if nobody who didn't explode is ahead of you (~${pdie}% by the model). What did you get?</div>
+  ${G.exploded&&!ctx.both?`<div class="card"><h2>Keep VP or coins?</h2><div class="muted">${vp} VP vs ${coins} coins${ctx.pay?"":` (worth ~${(coins*ctx.w_coin).toFixed(1)} VP now)`}.</div>
+    <div class="opts"><button class="opt ${e.takeVp?"best":""}" data-take="vp"><span>Take the ${vp} VP${takeVpRec?'<span class="tag">Best</span>':""}</span></button><button class="opt ${!e.takeVp?"best":""}" data-take="coins"><span>Take the ${coins} coins${!takeVpRec?'<span class="tag">Best</span>':""}</span></button></div></div>`:""}
+  ${!G.exploded?`<div class="card"><h2>Bonus die</h2><div class="muted">Rolled it? (~${pdie}% by the model)</div>
     <div class="mods" style="margin-top:8px">${["none","vp1","vp2","ruby","droplet","orange"].map(f=>`<button data-die="${f}" class="${e.die===f?"on":""}">${{none:"Didn't roll",vp1:"1 VP",vp2:"2 VP",ruby:"Ruby",droplet:"Droplet",orange:"Orange chip"}[f]}</button>`).join("")}</div></div>`:""}
   ${blacks?`<div class="card"><h2>Black ×${blacks}</h2><div class="muted">Compared with your neighbours' black chips:</div>
     <div class="mods" style="margin-top:8px">${["none","droplet","droplet+ruby"].map(f=>`<button data-moth="${f}" class="${e.moth===f?"on":""}">${{none:"Nothing",droplet:"Droplet +1","droplet+ruby":"Droplet +1 and ruby"}[f]}</button>`).join("")}</div></div>`:""}
@@ -601,18 +769,31 @@ function renderEval(){
 
 function applyEval(){
   const s=G.S,b=G.brew,ctx=G.ctx,e=G.ev;const space=s.pos+1;let[coins,vp,ruby]=track(space);
-  let rubies=ruby+(s.g1?1:0)+(s.g2?1:0),extra=0;const purples=b.nP-s.bag[I_P],blacks=b.nK-s.bag[I_K];
+  let rubies=ruby+(s.g1?1:0)+(s.g2?1:0),extra=0;const purples=b.nP-s.bag[I_P],blacks=b.nK-s.bag[I_K];const d0=G.droplet;
   if(purples>=3){extra+=2;G.droplet++;}else if(purples===2){extra+=1;rubies++;}else if(purples===1)extra+=1;
   if(blacks){if(e.moth!=="none")G.droplet++;if(e.moth==="droplet+ruby")rubies++;}
   if(G.exploded&&!ctx.both){if(e.takeVp)coins=0;else vp=0;}
-  else if(!G.exploded){extra+=ctx.novp;rubies+=ctx.noruby;if(e.die==="vp1")extra+=1;else if(e.die==="vp2")extra+=2;else if(e.die==="ruby")rubies++;else if(e.die==="droplet")G.droplet++;else if(e.die==="orange")G.bag[I_O]++;}
+  else if(!G.exploded){extra+=ctx.novp;rubies+=ctx.noruby;if(e.die==="vp1")extra+=1;else if(e.die==="vp2")extra+=2;else if(e.die==="ruby")rubies++;else if(e.die==="droplet")G.droplet++;else if(e.die==="orange"){G.bag[I_O]++;if(G.stock[I_O]>0)G.stock[I_O]--;}}
   G.vp+=vp+extra;G.rubies+=rubies;G.flask=s.flask;G.coins=coins;G.ev=null;G.mods=null;G.extraWhiteDone=false;
-  if(G.round<ROUNDS){G.screen="shop";G.shop=null;render();}else{G.screen="final";render();}
+  const steps=[];if(vp+extra)steps.push(`Move your seal <b>+${vp+extra} VP</b> to <b>${G.vp}</b>.`);if(rubies)steps.push(`Take <b>${plural(rubies,"ruby").replace("rubys","rubies")}</b> (now ${G.rubies}).`);
+  if(G.droplet>d0)steps.push(`Move your droplet to <b>${G.droplet}</b> (${G.droplet-d0>1?"+"+(G.droplet-d0)+" from chips/die":"chip or die effect"}).`);
+  if(e.die==="orange")steps.push("Put the orange chip from the supply into your bag.");
+  if(G.round<ROUNDS)steps.push(`Take <b>${coins} coins</b> for the shop.`);
+  const next=()=>{if(G.round<ROUNDS){G.screen="shop";G.shop=null;render();}else{G.screen="final";render();}};
+  popup({cls:"go",icon:"📜",title:"Score it",body:rulesList(steps.length?steps:["Nothing to collect this round."]),buttons:[{label:G.round<ROUNDS?"Done — go shopping":"Done — final score",cls:"primary",on:next}]});
 }
 
 // ---------- shop
+function rubyPlan(bagAfter,rubies,drop0){ // -> {steps, refill, alts:[{steps,refill,v}]}
+  const rnd=G.round,alts=[];
+  if(VMODEL){for(let st=0;st<=Math.floor(rubies/2);st++)for(const rf of[false,true]){if(rf&&(G.flask||rubies-2*st<2))continue;
+      alts.push({steps:st,refill:rf,v:vvalue(rnd+1,bagAfter,drop0+st,rubies-2*st-(rf?2:0),G.flask||rf)});}
+    alts.sort((a,b)=>b.v-a.v);return{steps:alts[0].steps,refill:alts[0].refill,alts};}
+  const acts=rubyAdvice(bagAfter,rubies,rnd,drop0,G.flask,G.vp);
+  return{steps:acts.filter(a=>a==="droplet").length,refill:acts.includes("flask"),alts:[]};}
 function renderShop(){
-  if(!G.shop){app.innerHTML=header(`Round ${G.round} · shop`)+`<div class="card thinking">Working out the best buy…</div>`;
+  SHOP.stock=G.stock;
+  if(!G.shop){app.innerHTML=hud(`Round ${G.round} · shop`)+`<div class="card thinking">Working out the best buy…</div>`;
     setTimeout(()=>{
       let ranked;
       if(VMODEL){ // rank every purchase by whole-game value (rubies spent optimally for each)
@@ -623,46 +804,61 @@ function renderShop(){
       }else ranked=bestPurchase(G.bag,G.coins,G.round,G.droplet,G.flask,G.vp);
       G.shop={ranked,bought:ranked[0][0]};render();},30);return;}
   const sh=G.shop;const boughtKey=o=>o.join("-");
-  const label=o=>o.length?o.map(i=>CNAME[COLOR[i]]+" "+VALUE[i]+" ("+PIC[COLOR[i]]+")").join(" + "):"Nothing";
+  const label=o=>o.length?o.map(i=>`${disc(i)} ${chipName(i)}`).join(" + "):"Nothing";
   const base=sh.ranked.find(([o])=>o.length===0);const baseEv=base?base[1]:0;
   // WIN model: show each option as an estimated win chance (margin projected with the mean opponent gain this round)
   const winPct=VMODEL&&VMODEL.win?v=>(100*sigmoid(v+vmargin(G.round+1)*(G.vp-(G.leader||0)-VMODEL.opp_gain[G.round-1]))).toFixed(1)+"%":null;
-  const why=o=>{if(!o.length)return "Save nothing — coins don't carry over, so buying is free value.";
+  const why=o=>{if(!o.length)return "Nothing here is worth its price right now (coins don't carry over, so this is rare).";
     const parts=[...new Set(o.map(i=>COLOR[i]))].map(c=>WHY[c]);return parts.join(" ");};
   const bagAfter=G.bag.slice();for(const i of sh.bought)bagAfter[i]++;
-  const rubiesNow=G.rubies;let acts;
-  if(VMODEL){const r=bestShopLearned(bagAfter,0,rubiesNow,G.round,G.droplet,G.flask);acts=new Array(r.steps).fill("droplet");if(r.refill)acts.push("flask");}
-  else acts=rubyAdvice(bagAfter,rubiesNow,G.round,G.droplet,G.flask,G.vp);
-  const nDrop=acts.filter(a=>a==="droplet").length,doFlask=acts.includes("flask");
-  sh.drop=sh.drop??0;sh.refill=sh.refill??false;
-  const spend=2*sh.drop+(sh.refill?2:0);const recSpend=2*nDrop+(doFlask?2:0);
-  app.innerHTML=header(`Round ${G.round} · shop`)+`
-  <div class="card"><h2>${G.coins} coins to spend</h2><div class="muted" style="margin-bottom:6px">${winPct?"Ranked by your chance of winning the game (learned from self-play at 4-player tables).":VMODEL?"Ranked by expected points for the rest of the game (learned from self-play).":"Ranked by how much each buy raises next round's expected score (VP-equivalent, coins and rubies included)."} Tap what you actually bought.</div>
-    <div class="opts">${sh.ranked.slice(0,7).map(([o,v],n)=>`<button class="opt ${boughtKey(o)===boughtKey(sh.bought)?"best":""}" data-buy="${n}"><span>${label(o)}${n===0?'<span class="tag">Best</span>':""}<div class="muted">${cost(o)} coins · ${winPct?`win chance ${winPct(v)} (nothing: ${winPct(baseEv)})`:`${VMODEL?"rest of game":"next round"} +${(v-baseEv).toFixed(2)} over buying nothing`}</div>${n===0||boughtKey(o)===boughtKey(sh.bought)?`<div class="muted" style="margin-top:4px">${why(o)}</div>`:""}</span><span class="ev num">${winPct?winPct(v):v.toFixed(2)}</span></button>`).join("")}</div></div>
-  <div class="card"><h2>Rubies: ${rubiesNow}</h2>
-    <div class="muted">Recommended: ${acts.length?acts.map(a=>a==="droplet"?"droplet +1":"refill flask").join(", "):"hold them"}. ${acts.includes("droplet")?"A droplet step is permanent — every remaining round starts one space further, which beats 1 VP at the end.":acts.includes("flask")?"An empty flask means no bomb take-back next round; refilling is worth more than holding.":"Two rubies are worth 1 VP at the end; nothing beats that right now."}</div>
-    ${acts.length&&(sh.drop!==nDrop||sh.refill!==doFlask)?`<button class="primary small" id="apply-rec" style="margin-top:8px">Apply: ${acts.map(a=>a==="droplet"?"droplet +1":"refill flask").join(" + ")} (${recSpend} rubies)</button>`:""}
-    <div class="row" style="margin-top:8px"><span class="grow">Droplet steps bought (2 rubies each) → droplet at ${G.droplet+sh.drop}</span><button class="small" id="dminus">−</button><b class="num" style="width:24px;text-align:center">${sh.drop}</b><button class="small" id="dplus">+</button></div>
+  const rubiesNow=G.rubies;const plan=rubyPlan(bagAfter,rubiesNow,G.droplet);
+  sh.drop=sh.drop??plan.steps;sh.refill=sh.refill??plan.refill;
+  const spend=2*sh.drop+(sh.refill?2:0);const recSpend=2*plan.steps+(plan.refill?2:0);
+  const soldOutNow=BUYABLE.filter(i=>!G.stock[i]);
+  let coachBig,coachWhy;
+  if(rubiesNow<2){coachBig=`Hold your ${rubiesNow===1?"ruby":"rubies"} — you need 2 to spend.`;coachWhy="Leftover pairs are worth 1 VP each at the end.";}
+  else if(plan.steps||plan.refill){const parts=[];if(plan.steps)parts.push(`move your droplet ${plan.steps>1?plan.steps+" steps ":""}to space ${G.droplet+plan.steps}`);if(plan.refill)parts.push("flip your flask back to full");
+    coachBig=`Pay ${recSpend} rubies now: ${parts.join(" and ")}.`;
+    coachWhy=(plan.steps?"A droplet step is permanent — every remaining brew starts a space further along, which is worth more than the 1 VP the pair would cash in for at the end. ":"")+(plan.refill?"With an empty flask you have no bomb take-back next round; refilling is worth more than holding the rubies. ":"")+`Keep ${rubiesNow-recSpend}.`;}
+  else{coachBig=`Hold all ${rubiesNow} rubies.`;coachWhy=`Every 2 rubies become 1 VP at the end of round 9${G.round>=7?", which is close now":""}; a droplet step${G.flask?"":" or a flask refill"} is worth less than that from here.`;}
+  app.innerHTML=hud(`Round ${G.round} · shop`)+`
+  <div class="card"><h2>${G.coins} coins to spend</h2><div class="muted" style="margin-bottom:6px"><b>Tap what you actually bought.</b>${soldOutNow.length?` <b>Sold out:</b> ${soldOutNow.map(chipName).join(", ")} — already left out.`:""}</div>
+    <div class="opts">${sh.ranked.slice(0,7).map(([o,v],n)=>`<button class="opt ${boughtKey(o)===boughtKey(sh.bought)?"best":""}" data-buy="${n}"><span>${label(o)}${n===0?'<span class="tag">Best</span>':""}<div class="muted">${cost(o)} coins${o.length?` · left in box: ${o.map(i=>`${VALUE[i]} ${CNAME[COLOR[i]]} ×${G.stock[i]}`).join(", ")}`:""} · ${winPct?`win chance ${winPct(v)} (nothing: ${winPct(baseEv)})`:`${VMODEL?"rest of game":"next round"} +${(v-baseEv).toFixed(2)} over buying nothing`}</div>${n===0||boughtKey(o)===boughtKey(sh.bought)?`<div class="muted" style="margin-top:4px">${why(o)}</div>`:""}</span><span class="ev num">${winPct?winPct(v):v.toFixed(2)}</span></button>`).join("")}</div></div>
+  <div class="card"><h2>Rubies: ${rubiesNow} <span class="gems">${Array.from({length:Math.min(rubiesNow,8)},(_,k)=>`<i class="${k<spend?"spent":""}"></i>`).join("")}</span></h2>
+    <div class="coach ${plan.steps||plan.refill?"":"hold"}"><div class="big">${coachBig}</div><div class="why">${coachWhy}</div></div>
+    ${plan.alts.length>1&&winPct?`<div class="muted" style="margin-top:8px">${plan.alts.slice(0,4).map(a=>`${a.steps?`droplet +${a.steps}`:""}${a.steps&&a.refill?" + ":""}${a.refill?"refill":""}${!a.steps&&!a.refill?"hold":""}: ${winPct(a.v)}`).join(" · ")}</div>`:""}
+    <div class="row" style="margin-top:10px"><span class="grow">Droplet steps (2 rubies each) → droplet on <b>${G.droplet+sh.drop}</b></span><button class="tiny" id="dminus">−</button><b class="num" style="width:24px;text-align:center">${sh.drop}</b><button class="tiny" id="dplus">+</button></div>
     ${!G.flask?`<div class="row" style="margin-top:8px"><span class="grow">Refill flask (2 rubies)</span><button class="small ${sh.refill?"primary":""}" id="fl">${sh.refill?"Yes":"No"}</button></div>`:""}
-    <div class="muted" style="margin-top:6px">${spend>rubiesNow?"<b>Not enough rubies for that.</b>":`Spending ${spend}, keeping ${rubiesNow-spend}. Move your droplet on the board now if you bought steps.`}</div></div>
+    <div class="muted" style="margin-top:6px">${spend>rubiesNow?"<b>Not enough rubies for that.</b>":`Spending ${spend}, keeping ${rubiesNow-spend}.`}</div></div>
+  <details class="card"><summary>Chip supply <span class="muted">${soldOutNow.length?soldOutNow.length+" sold out":"tap − for chips others bought"}</span></summary>
+    <div class="muted" style="margin:8px 0">Knock off what the others bought (yours comes off on Next).</div>${stockEditor()}</details>
   <div class="bar"><div class="in"><button class="primary" id="go" ${spend>rubiesNow?"disabled":""}>Next: round ${G.round+1}</button></div></div>`;
   app.querySelectorAll("[data-buy]").forEach(el=>el.onclick=()=>{sh.bought=sh.ranked[+el.dataset.buy][0];sh.drop=undefined;sh.refill=undefined;render();});
   $("#dminus").onclick=()=>{if(sh.drop>0)sh.drop--;render();};$("#dplus").onclick=()=>{sh.drop++;render();};
-  const ar=$("#apply-rec");if(ar)ar.onclick=()=>{sh.drop=nDrop;sh.refill=doFlask;render();};
   const fl=$("#fl");if(fl)fl.onclick=()=>{sh.refill=!sh.refill;render();};
-  $("#go").onclick=()=>{for(const i of sh.bought)G.bag[i]++;const d0=G.droplet;G.droplet+=sh.drop;G.rubies-=spend;if(sh.refill)G.flask=true;
-    G.lastShop={text:`bought ${label(sh.bought)}${sh.drop?`; droplet ${d0} → ${G.droplet} (${sh.drop*2} rubies)`:""}${sh.refill?"; flask refilled (2 rubies)":""}; rubies left ${G.rubies}`};
-    G.round++;G.screen="prebrew";render();};
+  bindStock(()=>{G.shop=null;render();});
+  $("#go").onclick=()=>{
+    const steps=[];const gone=[];
+    for(const i of sh.bought){G.bag[i]++;if(G.stock[i]>0)G.stock[i]--;if(!G.stock[i])gone.push(chipName(i));}
+    if(sh.bought.length)steps.push(`Take <b>${sh.bought.map(chipName).join(" + ")}</b> from the supply into your bag.`);
+    const d0=G.droplet;G.droplet+=sh.drop;G.rubies-=spend;if(sh.refill)G.flask=true;
+    if(sh.drop)steps.push(`Pay <b>${2*sh.drop} rubies</b> and move your droplet <b>${d0} → ${G.droplet}</b>.`);
+    if(sh.refill)steps.push("Pay <b>2 rubies</b> and flip your flask to full.");
+    steps.push(`Keep <b>${G.rubies} rub${G.rubies===1?"y":"ies"}</b>. Unspent coins are lost.`);
+    for(const g of gone)steps.push(`<b>${g} is now sold out</b> — nobody can buy it for the rest of the game.`);
+    G.lastShop={text:`bought ${sh.bought.length?sh.bought.map(chipName).join(" + "):"nothing"}${sh.drop?`; droplet ${d0} → ${G.droplet} (${sh.drop*2} rubies)`:""}${sh.refill?"; flask refilled (2 rubies)":""}; rubies left ${G.rubies}`};
+    popup({cls:"go",icon:"🛒",title:"At the table",body:rulesList(steps),buttons:[{label:`On to round ${G.round+1}`,cls:"primary",on:()=>{G.round++;G.screen="prebrew";render();}}]});};
 }
 
 function renderFinal(){
   const coins=G.coins,bonus=Math.floor(coins/5)+Math.floor(G.rubies/2);const total=G.vp+bonus;
-  app.innerHTML=header("Final score")+`
-  <div class="verdict"><div class="word num">${total} VP</div><div class="why">${G.vp} on the track + ${Math.floor(coins/5)} from ${coins} coins + ${Math.floor(G.rubies/2)} from ${G.rubies} rubies</div></div>
+  app.innerHTML=hud("Final score")+`
+  <div class="verdict"><div class="word num">${total} VP</div><div class="why">${G.vp} on the track + ${Math.floor(coins/5)} from ${coins} coins + ${Math.floor(G.rubies/2)} from ${G.rubies} rubies (5 coins or 2 rubies = 1 VP, repeatable)</div></div>
   <div class="card muted">Final bag: ${fmtBag(G.bag)}</div>
   <div class="bar"><div class="in"><button class="primary" id="new">New game</button></div></div>`;
   $("#new").onclick=newGame;
 }
 
+fabEl.onclick=boardPopup;
 newGame();
 </script>

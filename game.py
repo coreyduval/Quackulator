@@ -18,7 +18,7 @@ class Player:
     def __init__(self):
         self.bag = starting_bag()
         self.droplet = 0
-        self.rubies = 0
+        self.rubies = 1  # every player starts with one ruby
         self.vp = 0
         self.flask = True
 

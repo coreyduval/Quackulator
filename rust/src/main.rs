@@ -35,11 +35,11 @@ fn parity(weights: Option<String>) {
         println!("learned-mode parity (droplet 0, rubies 1, flask full, depth 1):");
         for (r, b) in [(1u32, "W1x4 W2x2 W3 O1 G1"), (5, "W1x5 W2x2 W3 O1x3 G1x2 B1 R1 R2 Y1")] {
             let bag = parse_bag(b);
-            let ctx = Ctx::new(r, Terminal::Learned(shop::pay_table(&m, &bag, r, 0, 1, true, 0)));
+            let ctx = Ctx::new(r, Terminal::Learned(shop::pay_table(&m, &bag, r, 0, 1, true, 0, &initial_stock(4))));
             let mut brew = Brew::new(&ctx, bag, true, 1);
             let s = brew.start(0, 0);
             let (_, stop, draw) = brew.should_draw(&s);
-            let sh = shop::best_shop_learned(&m, &bag, 12, 3, r, 0, true);
+            let sh = shop::best_shop_learned(&m, &bag, 12, 3, r, 0, true, &initial_stock(4));
             println!("  round {} V={:.4} stop={:.4} draw={:.4}  shop(12 coins,3 rubies)={:?} steps {} refill {} v {:.4}", r, brew.value(&s), stop, draw.unwrap(),
                 sh.0.iter().map(|&i| NAMES[i]).collect::<Vec<_>>(), sh.1, sh.2, sh.3);
         }
@@ -66,7 +66,7 @@ fn parity(weights: Option<String>) {
     let s = State { bag: parse_bag("W1 W2x2 O1x4 R1 R2 R4 B1 B2 B4 K1"), pos: 25, white: 7, lastw: 1, g1: false, g2: false, flask: true };
     let (d, stop, draw) = brew.should_draw(&s);
     println!("round-9 playtest state, exact: stop {:.4} draw {:.4} -> {} (python: 10.08 / 10.65 DRAW)", stop, draw.unwrap(), if d { "DRAW" } else { "STOP" });
-    let ranked = shop::best_purchase_heuristic(&starting_bag(), 10, 1, 0, true, 2);
+    let ranked = shop::best_purchase_heuristic(&starting_bag(), 10, 1, 0, true, 2, &initial_stock(4));
     println!("shop parity (start bag, 10 coins, after round 1): {:?}", ranked.iter().take(3).map(|(o, v)| (o.iter().map(|&i| NAMES[i]).collect::<Vec<_>>().join("+"), (v * 1000.0).round() / 1000.0)).collect::<Vec<_>>());
     println!("python gave: K1 9.176, B2 7.871, G2 7.380");
 }

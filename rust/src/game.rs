@@ -115,8 +115,8 @@ pub struct Brewed {
 }
 
 /// Brew one round with optimal in-round choices. `rats` is the rat-tail head start.
-pub fn brew_phase(p: &Player, rnd: u32, model: Option<&Model>, depth: u8, rats: u32, margin: i32, rng: &mut Rng, trace: bool) -> Brewed {
-    let term = match model { Some(m) => Terminal::Learned(pay_table(m, &p.bag, rnd, p.droplet, p.rubies, p.flask, margin)), None => Terminal::Heuristic };
+pub fn brew_phase(p: &Player, rnd: u32, model: Option<&Model>, depth: u8, rats: u32, margin: i32, stock: &Bag, rng: &mut Rng, trace: bool) -> Brewed {
+    let term = match model { Some(m) => Terminal::Learned(pay_table(m, &p.bag, rnd, p.droplet, p.rubies, p.flask, margin, stock)), None => Terminal::Heuristic };
     let ctx = Ctx::new(rnd, term);
     let (s, exploded, n_p, n_k) = {
         let mut brew = Brew::new(&ctx, p.bag, p.flask, depth);
@@ -144,7 +144,7 @@ pub fn black_vs_model(b: &Brewed, rng: &mut Rng) -> (bool, bool) {
 
 /// Apply a brewed round to the player: chip effects, the black outcome, keep-VP-or-coins on an
 /// explosion, the bonus die if `won_die`. Returns the coins available for the shop.
-pub fn settle_phase(p: &mut Player, b: &Brewed, black: (bool, bool), won_die: bool, rng: &mut Rng, trace: bool, res: &mut GameResult) -> i32 {
+pub fn settle_phase(p: &mut Player, b: &Brewed, black: (bool, bool), won_die: bool, stock: &mut Bag, rng: &mut Rng, trace: bool, res: &mut GameResult) -> i32 {
     let rnd = b.ctx.rnd;
     let (mut coins, mut vp) = (b.coins, b.vp);
     let mut rubies = b.ruby + b.greens;
@@ -165,7 +165,8 @@ pub fn settle_phase(p: &mut Player, b: &Brewed, black: (bool, bool), won_die: bo
     } else if won_die {
         let face = DIE[rng.below(6) as usize];
         match face {
-            0 => extra += 1, 1 => extra += 2, 2 => rubies += 1, 3 => p.droplet += 1, _ => bag_after[I_O] += 1,
+            0 => extra += 1, 1 => extra += 2, 2 => rubies += 1, 3 => p.droplet += 1,
+            _ => if stock[I_O] > 0 { stock[I_O] -= 1; bag_after[I_O] += 1; },
         }
         res.die_wins += 1;
         if trace { println!("    bonus die: {}", ["+1 VP", "+2 VP", "ruby", "droplet", "orange chip"][face as usize]); }
@@ -181,29 +182,33 @@ pub fn settle_phase(p: &mut Player, b: &Brewed, black: (bool, bool), won_die: bo
 }
 
 /// Shop (rounds 1-8) or cash out (round 9).
-pub fn shop_phase(p: &mut Player, rnd: u32, model: Option<&Model>, coins: i32, rng: &mut Rng, explore: f64, trace: bool, res: &mut GameResult) {
+pub fn shop_phase(p: &mut Player, rnd: u32, model: Option<&Model>, coins: i32, stock: &mut Bag, rng: &mut Rng, explore: f64, trace: bool, res: &mut GameResult) {
     if rnd < ROUNDS {
         match model {
             Some(m) => {
-                let (mut opt, steps, refill, _) = best_shop_learned(m, &p.bag, coins, p.rubies, rnd, p.droplet, p.flask);
-                if explore > 0.0 && rng.f64() < explore {
-                    // exploration: a random affordable purchase, so the value fit sees every colour
-                    let opts = purchase_options(&p.bag, coins, rnd);
+                let (mut opt, mut steps, mut refill, _) = best_shop_learned(m, &p.bag, coins, p.rubies, rnd, p.droplet, p.flask, stock);
+                let explored = explore > 0.0 && rng.f64() < explore;
+                if explored {
+                    // exploration: a random affordable purchase and a random ruby spend, so the value
+                    // fit sees every colour and both flask states (otherwise the flask is never refilled
+                    // and its coefficient collapses to zero)
+                    let opts = purchase_options(&p.bag, coins, rnd, stock);
                     opt = opts[rng.below(opts.len() as u32) as usize].clone();
+                    steps = rng.below((p.rubies / 2 + 1) as u32) as i32;
+                    refill = !p.flask && p.rubies - 2 * steps >= 2 && rng.f64() < 0.5;
                 }
                 if trace {
-                    let (ranked, _, _, _) = best_shop_learned(m, &p.bag, coins, p.rubies, rnd, p.droplet, p.flask);
                     let names: Vec<&str> = opt.iter().map(|&i| NAMES[i]).collect();
                     println!("    shop ({} coins, {} rubies): buy [{}]{}; droplet +{} refill {}", coins, p.rubies, names.join(" "),
-                             if ranked != opt { " (exploration)" } else { "" }, steps, refill);
+                             if explored { " (exploration)" } else { "" }, steps, refill);
                 }
-                for &i in &opt { p.bag[i] += 1; res.bought[i] += 1; }
+                for &i in &opt { p.bag[i] += 1; res.bought[i] += 1; stock[i] -= 1; }
                 p.droplet += steps; p.rubies -= 2 * steps; if refill { p.rubies -= 2; p.flask = true; }
             }
             None => {
-                let ranked = best_purchase_heuristic(&p.bag, coins, rnd, p.droplet, p.flask, p.vp);
+                let ranked = best_purchase_heuristic(&p.bag, coins, rnd, p.droplet, p.flask, p.vp, stock);
                 let pick = if explore > 0.0 && rng.f64() < explore { rng.below(ranked.len() as u32) as usize } else { 0 };
-                for &i in &ranked[pick].0 { p.bag[i] += 1; res.bought[i] += 1; }
+                for &i in &ranked[pick].0 { p.bag[i] += 1; res.bought[i] += 1; stock[i] -= 1; }
                 let (d, f, r) = spend_rubies_heuristic(&p.bag, p.rubies, rnd, p.droplet, p.flask, p.vp);
                 if trace {
                     let names: Vec<&str> = ranked[pick].0.iter().map(|&i| NAMES[i]).collect();
@@ -220,7 +225,7 @@ pub fn shop_phase(p: &mut Player, rnd: u32, model: Option<&Model>, coins: i32, r
     res.vp_after[rnd as usize - 1] = p.vp;
 }
 
-pub fn new_player() -> Player { Player { bag: starting_bag(), droplet: 0, rubies: 0, vp: 0, flask: true } }
+pub fn new_player() -> Player { Player { bag: starting_bag(), droplet: 0, rubies: START_RUBIES, vp: 0, flask: true } }
 pub fn new_result() -> GameResult {
     GameResult { vp: 0, spaces: [0; 9], exploded: [false; 9], samples: vec![], bought: [0; N], vp_after: [0; 9], took_coins: [false; 9], final_bag: [0; N], rats: 0, die_wins: 0, won: false, others_r9: 0 }
 }
@@ -234,6 +239,8 @@ pub fn play_game(seed: u64, model: Option<&Model>, depth: u8, record: bool, expl
     let mut rng = Rng::new(seed);
     let mut p = new_player();
     let mut res = new_result();
+    // the modelled opponents buy nothing, so only this player's purchases deplete the supply
+    let mut stock = initial_stock(OPP.n + 1);
     for rnd in 1..=ROUNDS {
         if rnd == EXTRA_WHITE_ROUND { p.bag[I_W1] += 1; }
         // solo samples carry no margin (VP objective); the OPP leader curve stands in for the table
@@ -244,11 +251,11 @@ pub fn play_game(seed: u64, model: Option<&Model>, depth: u8, record: bool, expl
         if rnd == ROUNDS { res.others_r9 = leader; }
         res.rats += rats;
         if trace { trace_round_header("", rnd, &p, rats, margin); }
-        let b = brew_phase(&p, rnd, model, depth, rats, margin, &mut rng, trace);
+        let b = brew_phase(&p, rnd, model, depth, rats, margin, &stock, &mut rng, trace);
         let black = black_vs_model(&b, &mut rng);
         let won_die = !b.exploded && rng.f64() < b.ctx.p_win_die(b.space);
-        let coins = settle_phase(&mut p, &b, black, won_die, &mut rng, trace, &mut res);
-        shop_phase(&mut p, rnd, model, coins, &mut rng, explore, trace, &mut res);
+        let coins = settle_phase(&mut p, &b, black, won_die, &mut stock, &mut rng, trace, &mut res);
+        shop_phase(&mut p, rnd, model, coins, &mut stock, &mut rng, explore, trace, &mut res);
     }
     res.vp = p.vp;
     res.final_bag = p.bag;

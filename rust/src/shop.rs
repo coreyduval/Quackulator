@@ -26,11 +26,12 @@ pub fn set_only(spec: &str) {
     ALLOW.store(m, Ordering::Relaxed);
 }
 
-pub fn purchase_options(bag: &Bag, coins: i32, rnd: u32) -> Vec<Vec<usize>> {
+/// Every legal buy: 0, 1 or 2 chips of different colours, affordable, unlocked, and still in `stock`.
+pub fn purchase_options(bag: &Bag, coins: i32, rnd: u32, stock: &Bag) -> Vec<Vec<usize>> {
     let mut allow = ALLOW.load(Ordering::Relaxed);
     if bag[I_O] as u32 >= MAX_ORANGE.load(Ordering::Relaxed) { allow &= !(1 << I_O); }
     if bag[I_K] as u32 >= MAX_BLACK.load(Ordering::Relaxed) { allow &= !(1 << I_K); }
-    let avail: Vec<usize> = (0..N).filter(|&i| PRICE[i] > 0 && (allow >> i) & 1 == 1 && unlock_round(COLOR[i]) <= rnd + 1 && PRICE[i] <= coins).collect();
+    let avail: Vec<usize> = (0..N).filter(|&i| PRICE[i] > 0 && stock[i] > 0 && (allow >> i) & 1 == 1 && unlock_round(COLOR[i]) <= rnd + 1 && PRICE[i] <= coins).collect();
     let mut opts = vec![vec![]];
     for &i in &avail { opts.push(vec![i]); }
     for a in 0..avail.len() { for b in a + 1..avail.len() {
@@ -54,10 +55,10 @@ fn next_round_ev(bag: &Bag, droplet: i32, flask: bool, ctx: &Ctx, abs: &mut Abst
 }
 
 /// (purchase, ev) ranked best first — v1 method
-pub fn best_purchase_heuristic(bag: &Bag, coins: i32, rnd: u32, droplet: i32, flask: bool, my_vp: i32) -> Vec<(Vec<usize>, f64)> {
+pub fn best_purchase_heuristic(bag: &Bag, coins: i32, rnd: u32, droplet: i32, flask: bool, my_vp: i32, stock: &Bag) -> Vec<(Vec<usize>, f64)> {
     let ctx = Ctx::new(rnd + 1, Terminal::Heuristic);
     let mut abs = Abstract::new();
-    let opts = purchase_options(bag, coins, rnd);
+    let opts = purchase_options(bag, coins, rnd, stock);
     let mut scored: Vec<(Vec<usize>, f64)> = vec![];
     for o in opts.iter().filter(|o| o.len() <= 1) {
         scored.push((o.clone(), next_round_ev(&apply(bag, o), droplet, flask, &ctx, &mut abs, my_vp)));
@@ -94,7 +95,7 @@ pub fn spend_rubies_heuristic(bag: &Bag, mut rubies: i32, rnd: u32, mut droplet:
 // ------------------------------------------------------------------ learned mode
 /// Best use of `coins` and `rubies` after round `rnd`, scored by V_{rnd+1}.
 /// Returns (purchase, droplet steps bought, refill flask, value).
-pub fn best_shop_learned(model: &Model, bag: &Bag, coins: i32, rubies: i32, rnd: u32, droplet: i32, flask: bool) -> (Vec<usize>, i32, bool, f64) {
+pub fn best_shop_learned(model: &Model, bag: &Bag, coins: i32, rubies: i32, rnd: u32, droplet: i32, flask: bool, stock: &Bag) -> (Vec<usize>, i32, bool, f64) {
     if rnd >= ROUNDS {
         // game over: coins and rubies convert to VP (WIN model: the game-end logit without the margin term)
         let cash = (coins / 5 + rubies / 2) as f64;
@@ -102,7 +103,7 @@ pub fn best_shop_learned(model: &Model, bag: &Bag, coins: i32, rubies: i32, rnd:
         return (vec![], 0, false, v);
     }
     let next = rnd + 1;
-    let opts = purchase_options(bag, coins, rnd);
+    let opts = purchase_options(bag, coins, rnd, stock);
     let mut best = (vec![], 0, false, f64::NEG_INFINITY);
     for o in &opts {
         let b = apply(bag, o);
@@ -121,14 +122,14 @@ pub fn best_shop_learned(model: &Model, bag: &Bag, coins: i32, rubies: i32, rnd:
 
 /// PayTable for brewing round `rnd` with the learned model: for each (coins, rubies gained,
 /// droplet steps gained, flask used) the value of the best shop + ruby spend from that outcome.
-pub fn pay_table(model: &Model, bag: &Bag, rnd: u32, droplet: i32, rubies: i32, flask_full: bool, margin: i32) -> PayTable {
+pub fn pay_table(model: &Model, bag: &Bag, rnd: u32, droplet: i32, rubies: i32, flask_full: bool, margin: i32, stock: &Bag) -> PayTable {
     let mut g = vec![0.0; PayTable::len()];
     for c in 0..36usize {
         for r in 0..=RUBMAX {
             for d in 0..=DDMAX {
                 for fu in 0..2usize {
                     let flask_now = flask_full && fu == 0;
-                    let (_, _, _, v) = best_shop_learned(model, bag, c as i32, rubies + r as i32, rnd, droplet + d as i32, flask_now);
+                    let (_, _, _, v) = best_shop_learned(model, bag, c as i32, rubies + r as i32, rnd, droplet + d as i32, flask_now, stock);
                     g[PayTable::index(c, r, d, fu)] = v;
                 }
             }

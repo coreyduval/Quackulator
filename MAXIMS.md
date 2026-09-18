@@ -202,7 +202,8 @@ The engine is exact about the rules it was given; its accuracy at your table dep
 3. **The bonus die's sixth face** is assumed to be a second "1 VP".
 4. **Fortune-teller cards** are not modelled in the simulator. In the advisor they are a small set of switches (explosion limit 8 or 9, droplet +1 for the round, exploded pots keep both, +1/+2 VP or +1 ruby for not exploding). Cards outside that set are not modelled; when one is drawn, enter nothing and treat the advice as slightly conservative. Most cards apply to every player and therefore cancel under the win objective.
 5. **The die and black-chip curves** of Maxims 12 and 19 were calibrated against the engine's own play. A table that explodes more often than the simulated one hands out the die more freely; the draw/stop decisions would move a little towards drawing.
-6. **The opponent-gain curve** of Table 2 is the mean of the simulated table. Against markedly stronger or weaker human opponents the projected margin is biased by the difference, which shifts the risk appetite of Maxim 16 but not the ranking of purchases.
+6. **The chip supply** is the box's (215 chips; e.g. ten blue 2-chips, twenty pumpkins) and is shared by the table in the simulator; in the advisor the other players' purchases must be entered for the shop to drop a sold-out chip. Every player starts with one ruby.
+7. **The opponent-gain curve** of Table 2 is the mean of the simulated table. Against markedly stronger or weaker human opponents the projected margin is biased by the difference, which shifts the risk appetite of Maxim 16 but not the ranking of purchases.
 
 ## 7. Summary of the maxims
 

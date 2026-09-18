@@ -44,6 +44,16 @@ pub const I_W: [usize; 4] = [usize::MAX, 0, 1, 2];
 
 /// price per chip type (0 = not buyable)
 pub const PRICE: [i32; N] = [0, 0, 0, 3, 4, 8, 14, 5, 10, 19, 6, 10, 16, 8, 12, 18, 9, 10];
+/// Chips in the box (215): the supply is shared by the table and a sold-out type cannot be bought.
+pub const STOCK: [u8; N] = [20, 8, 4, 20, 15, 10, 13, 14, 10, 10, 12, 8, 10, 13, 6, 10, 15, 18];
+/// Every player starts with one ruby.
+pub const START_RUBIES: i32 = 1;
+/// Supply after `players` starting bags have been dealt from it.
+pub fn initial_stock(players: u32) -> Bag {
+    let mut s = STOCK;
+    for i in 0..N { s[i] = s[i].saturating_sub((starting_bag()[i] as u32 * players) as u8); }
+    s
+}
 pub fn unlock_round(color: u8) -> u32 {
     match color { b'Y' => 2, b'P' => 3, _ => 1 }
 }
