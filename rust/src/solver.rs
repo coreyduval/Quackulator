@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::hash::{BuildHasherDefault, Hasher};
 
 use crate::data::*;
+use crate::fortune::Fortune;
 
 // ----------------------------------------------------------------------------- fast hasher
 #[derive(Default)]
@@ -74,6 +75,8 @@ pub struct Ctx {
     pub both: bool,
     pub novp: f64,
     pub opp_black: f64,
+    /// expected blacks in each neighbour's pot (table mode: from their real bags); None = OPP schedule for both
+    pub nb_black: Option<[f64; 2]>,
     pub w_coin: f64,
     pub w_ruby: f64,
     pub w_drop: f64,
@@ -82,28 +85,69 @@ pub struct Ctx {
     pub die_ev: f64,
     pub term: Terminal,
     die_cache: Vec<f64>,
+    // fortune-teller rules for the round (see fortune.rs / apply_fortune)
+    /// Pumpkin Party: extra spaces for every orange chip
+    pub orange_bonus: i32,
+    /// Bubbling Over: exactly 7 whites at a stop = a droplet step
+    pub white7_drop: bool,
+    /// Lucky Devil: VP scored when the final space shows a ruby (even if exploded)
+    pub lucky_vp: i32,
+    /// Fire Burn: a second ruby when the final space shows one
+    pub fire_ruby: bool,
+    /// Flask Rabbit: flasks refill for free at the end of the round
+    pub flask_free: bool,
+    /// Double Double: the bonus die is rolled twice
+    pub die_twice: bool,
+    /// Safety Procedure: after stopping, reveal up to 5 chips and place one of them
+    pub safety: bool,
+    /// Second Chances: once, after the 5th chip (if it did not explode), put everything back and restart
+    pub mulligan: bool,
+    /// Cauldron Bubble: the first white drawn may go back into the bag
+    pub bubble: bool,
 }
 
 impl Ctx {
-    pub fn new(rnd: u32, term: Terminal) -> Ctx {
+    pub fn new(rnd: u32, term: Terminal) -> Ctx { Ctx::with_opps(rnd, term, OPP.n, None) }
+    /// `n_opp` neighbours whose pot blacks are ~Poisson(nb_black[j]) (table mode passes the real bags)
+    pub fn with_opps(rnd: u32, term: Terminal, n_opp: u32, nb_black: Option<[f64; 2]>) -> Ctx {
         let r = rnd as usize;
         let w_ruby = W_RUBY[r];
         let w_drop = W_DROP[r];
         let w_orange = W_ORANGE[r];
         let die_ev = (1.0 + 1.0 + 2.0 + w_ruby + w_drop + w_orange) / 6.0;
         let mut c = Ctx {
-            rnd, limit: EXPLODE_LIMIT, n_opp: OPP.n, both: false, novp: 0.0, opp_black: OPP.opp_black[r],
+            rnd, limit: EXPLODE_LIMIT, n_opp, both: false, novp: 0.0, opp_black: OPP.opp_black[r], nb_black,
             w_coin: W_COIN[r], w_ruby, w_drop, w_orange, w_flask: if rnd >= ROUNDS { 0.0 } else { 1.5 * w_ruby },
             die_ev, term, die_cache: vec![-1.0; 64],
+            orange_bonus: 0, white7_drop: false, lucky_vp: 0, fire_ruby: false, flask_free: false, die_twice: false, safety: false, mulligan: false, bubble: false,
         };
         for s in 0..64 { c.die_cache[s] = c.calc_p_win_die(s); }
         c
     }
+    /// Blue cards change the round's rules; Toil and Trouble and the purple cards leave the brew alone.
+    pub fn apply_fortune(&mut self, card: Fortune) {
+        match card {
+            Fortune::BubblingOver => self.white7_drop = true,
+            Fortune::SecondChances => self.mulligan = true,
+            Fortune::DoubleDouble => self.die_twice = true,
+            Fortune::PortentousPotables => self.limit = 9,
+            Fortune::PumpkinParty => self.orange_bonus = 1,
+            Fortune::SafetyProcedure => self.safety = true,
+            Fortune::LuckyDevil => self.lucky_vp = 2,
+            Fortune::FlaskRabbit => self.flask_free = true,
+            Fortune::CauldronBubble => self.bubble = true,
+            Fortune::FireBurn => self.fire_ruby = true,
+            _ => {}
+        }
+    }
+    /// (P(droplet), P(ruby too)) from `blacks` in my pot: beat one neighbour / beat both.
+    /// One neighbour (2 players): a tie still gives the droplet.
     pub fn black_odds(&self, blacks: i32) -> (f64, f64) {
-        let mu = self.opp_black;
-        let pl = pois_cdf(blacks - 1, mu);
-        let pe = pois_pmf(blacks, mu);
-        if self.n_opp <= 1 { (pl + pe, pl) } else { (1.0 - (1.0 - pl).powi(2), pl.powi(2)) }
+        let mus = self.nb_black.unwrap_or([self.opp_black, self.opp_black]);
+        let p1 = pois_cdf(blacks - 1, mus[0]);
+        if self.n_opp <= 1 { return (p1 + pois_pmf(blacks, mus[0]), p1); }
+        let p2 = pois_cdf(blacks - 1, mus[1]);
+        (1.0 - (1.0 - p1) * (1.0 - p2), p1 * p2)
     }
     fn calc_p_win_die(&self, space: usize) -> f64 {
         if self.n_opp == 0 { return 1.0; }
@@ -114,34 +158,39 @@ impl Ctx {
     #[inline]
     pub fn p_win_die(&self, space: usize) -> f64 { self.die_cache[space.min(63)] }
 
-    pub fn terminal(&self, pos: usize, exploded: bool, greens: i32, purples: i32, blacks: i32, flask_used: bool) -> f64 {
+    /// `white` = white total in the pot (Bubbling Over pays a droplet step for exactly 7 at a stop).
+    pub fn terminal(&self, pos: usize, exploded: bool, greens: i32, purples: i32, blacks: i32, flask_used: bool, white: i32) -> f64 {
+        let flask_used = flask_used && !self.flask_free;
         match &self.term {
-            Terminal::Heuristic => self.terminal_heuristic(pos, exploded, greens, purples, blacks, flask_used),
-            Terminal::Learned(t) => self.terminal_learned(t, pos, exploded, greens, purples, blacks, flask_used),
+            Terminal::Heuristic => self.terminal_heuristic(pos, exploded, greens, purples, blacks, flask_used, white),
+            Terminal::Learned(t) => self.terminal_learned(t, pos, exploded, greens, purples, blacks, flask_used, white),
         }
     }
+    #[inline]
+    fn die_mult(&self) -> f64 { if self.die_twice { 2.0 } else { 1.0 } }
 
-    fn terminal_heuristic(&self, pos: usize, exploded: bool, greens: i32, purples: i32, blacks: i32, flask_used: bool) -> f64 {
+    fn terminal_heuristic(&self, pos: usize, exploded: bool, greens: i32, purples: i32, blacks: i32, flask_used: bool, white: i32) -> f64 {
         let space = pos + 1;
         let (coins, vp, ruby) = track(space);
-        let mut rubies = ruby + greens as f64;
-        let mut extra = 0.0;
+        let mut rubies = ruby + greens as f64 + if self.fire_ruby { ruby } else { 0.0 };
+        let mut extra = self.lucky_vp as f64 * ruby;
         if purples >= 3 { extra += 2.0 + self.w_drop; } else if purples == 2 { extra += 1.0; rubies += 1.0; } else if purples == 1 { extra += 1.0; }
         if blacks > 0 { let (pd, pr) = self.black_odds(blacks); extra += pd * self.w_drop; rubies += pr; }
+        if !exploded && self.white7_drop && white == 7 { extra += self.w_drop; }
         extra += rubies * self.w_ruby;
         if flask_used { extra -= self.w_flask; }
         if exploded && !self.both { return vp.max(coins * self.w_coin) + extra; }
         let mut val = vp + coins * self.w_coin + extra;
-        if !exploded { val += self.novp + self.p_win_die(space) * self.die_ev; }
+        if !exploded { val += self.novp + self.p_win_die(space) * self.die_ev * self.die_mult(); }
         val
     }
 
-    fn terminal_learned(&self, t: &PayTable, pos: usize, exploded: bool, greens: i32, purples: i32, blacks: i32, flask_used: bool) -> f64 {
+    fn terminal_learned(&self, t: &PayTable, pos: usize, exploded: bool, greens: i32, purples: i32, blacks: i32, flask_used: bool, white: i32) -> f64 {
         let space = pos + 1;
         let (coins, vp, ruby) = track_i(space);
-        let mut rub = ruby + greens;
-        let mut vp_now = 0;          // VP from chip effects, kept even when exploded
-        let mut dd = 0;
+        let mut rub = ruby + greens + if self.fire_ruby { ruby } else { 0 };
+        let mut vp_now = self.lucky_vp * ruby;          // VP from chip effects, kept even when exploded
+        let mut dd = if !exploded && self.white7_drop && white == 7 { 1 } else { 0 };
         if purples >= 3 { vp_now += 2; dd += 1; } else if purples == 2 { vp_now += 1; rub += 1; } else if purples == 1 { vp_now += 1; }
         let (pd, pr) = if blacks > 0 { self.black_odds(blacks) } else { (0.0, 0.0) };
         if !t.win {
@@ -158,7 +207,7 @@ impl Ctx {
             let mut val = (vp + vp_now) as f64 + base;
             if !exploded {
                 let die = (1.0 + 1.0 + 2.0 + (g(coins, rub + 1, dd) - base) + (g(coins, rub, dd + 1) - base) + t.d_orange) / 6.0;
-                val += self.novp + self.p_win_die(space) * die;
+                val += self.novp + self.p_win_die(space) * die * self.die_mult();
             }
             return val;
         }
@@ -180,7 +229,7 @@ impl Ctx {
         let die = (2.0 * h(coins, rub, dd, vpg + 1.0, 0.0) + h(coins, rub, dd, vpg + 2.0, 0.0)
                    + h(coins, rub + 1, dd, vpg, 0.0) + h(coins, rub, dd + 1, vpg, 0.0) + h(coins, rub, dd, vpg, t.d_orange)) / 6.0;
         let p = self.p_win_die(space);
-        base + p * (die - base)
+        base + p * (die - base) * self.die_mult()
     }
 }
 
@@ -194,6 +243,10 @@ pub struct State {
     pub g1: bool,
     pub g2: bool,
     pub flask: bool,
+    /// Second Chances still available (cleared once the 5th chip is in the pot)
+    pub mull: bool,
+    /// Cauldron Bubble: no white drawn yet, so the first one may go back
+    pub cb: bool,
 }
 impl State {
     #[inline]
@@ -206,10 +259,21 @@ impl State {
         k = (k << 1) | self.g1 as u128;
         k = (k << 1) | self.g2 as u128;
         k = (k << 1) | self.flask as u128;
+        k = (k << 1) | self.mull as u128;
+        k = (k << 1) | self.cb as u128;
         (k << 7) | d as u128
     }
     #[inline]
     pub fn without(&self, i: usize) -> State { let mut s = *self; s.bag[i] -= 1; s }
+}
+
+/// Safety Procedure: value of revealing up to 5 chips after a stop and placing the best (or none).
+/// `opts` = (value if placed, P(at least one such chip among the reveal)), reveals treated as independent.
+fn expected_best(mut opts: Vec<(f64, f64)>, base: f64) -> f64 {
+    opts.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
+    let (mut val, mut rest) = (0.0, 1.0);
+    for (v, p) in opts { val += rest * p * v; rest *= 1.0 - p; }
+    val + rest * base
 }
 
 // ----------------------------------------------------------------------------- abstract solver
@@ -225,10 +289,12 @@ impl Abstract {
             b'B' => v + match VALUE[i] { 1 => 1.0, 2 => 1.0, _ => 2.0 },
             b'Y' => v + 0.6,
             b'G' => v + 0.3 * ctx.w_ruby,
+            b'O' => v + ctx.orange_bonus as f64,
             _ => v,
         }
     }
-    pub fn value(&mut self, ctx: &Ctx, s: &State, greens: i32, purples: i32, blacks: i32, oranges: i32) -> f64 {
+    /// `mull_n` = chips left in the bag when the 5th is in the pot, `restart` = value of starting the round over (Second Chances)
+    pub fn value(&mut self, ctx: &Ctx, s: &State, greens: i32, purples: i32, blacks: i32, oranges: i32, mull_n: u32, restart: f64) -> f64 {
         let w = [s.bag[I_W1], s.bag[I_W2], s.bag[I_W3]];
         let mut safe = [0u8; 8];
         for i in 0..N {
@@ -237,30 +303,55 @@ impl Abstract {
             let v = (Self::eff(ctx, i, oranges).round() as usize).min(7);
             safe[v] += k;
         }
-        self.v(ctx, w, safe, s.bag[I_P], s.bag[I_K], s.pos, s.white, s.flask, greens as u8, purples as u8, blacks as u8)
+        self.v(ctx, w, safe, s.bag[I_P], s.bag[I_K], s.pos, s.white, s.flask, greens as u8, purples as u8, blacks as u8, s.mull, s.cb, mull_n, restart)
+    }
+    /// Stop value, with the Safety Procedure reveal when that card is out.
+    #[allow(clippy::too_many_arguments)]
+    fn stop(ctx: &Ctx, w: [u8; 3], safe: [u8; 8], pr: u8, kr: u8, pos: u8, white: u8, flask: bool, g: u8, p: u8, b: u8, n: u32) -> f64 {
+        let (g, p, b, fu, wh) = (g as i32, p as i32, b as i32, !flask, white as i32);
+        let base = ctx.terminal(pos as usize, false, g, p, b, fu, wh);
+        if !ctx.safety || n == 0 { return base; }
+        let k = n.min(5);
+        let mut opts = vec![];
+        let mut push = |cnt: u8, v: f64| if cnt > 0 && v > base { opts.push((v, 1.0 - comb(n - cnt as u32, k) / comb(n, k))); };
+        let at = |v: usize| (pos as usize + v).min(LAST);
+        for v in 1..8 { push(safe[v], ctx.terminal(at(v), false, g, p, b, fu, wh)); }
+        for wi in 0..3 { let v = wi as i32 + 1; if wh + v <= ctx.limit { push(w[wi], ctx.terminal(at(v as usize), false, g, p, b, fu, wh + v)); } }
+        push(pr, ctx.terminal(at(1), false, g, p + 1, b, fu, wh));
+        push(kr, ctx.terminal(at(1), false, g, p, b + 1, fu, wh));
+        expected_best(opts, base)
     }
     #[allow(clippy::too_many_arguments)]
-    fn v(&mut self, ctx: &Ctx, w: [u8; 3], safe: [u8; 8], pr: u8, kr: u8, pos: u8, white: u8, flask: bool, g: u8, p: u8, b: u8) -> f64 {
+    fn v(&mut self, ctx: &Ctx, w: [u8; 3], safe: [u8; 8], pr: u8, kr: u8, pos: u8, white: u8, flask: bool, g: u8, p: u8, b: u8, mull: bool, cb: bool, mull_n: u32, restart: f64) -> f64 {
         let mut key: u128 = 0;
         for x in w { key = (key << 4) | x as u128; }
         for x in safe { key = (key << 5) | x as u128; }
         key = (key << 4) | pr as u128; key = (key << 4) | kr as u128;
         key = (key << 6) | pos as u128; key = (key << 4) | white as u128; key = (key << 1) | flask as u128;
         key = (key << 2) | g as u128; key = (key << 3) | p as u128; key = (key << 3) | b as u128;
+        key = (key << 1) | mull as u128; key = (key << 1) | cb as u128;
         if let Some(&v) = self.memo.get(&key) { return v; }
-        let mut best = ctx.terminal(pos as usize, false, g as i32, p as i32, b as i32, !flask);
         let n = w.iter().map(|&x| x as u32).sum::<u32>() + safe.iter().map(|&x| x as u32).sum::<u32>() + pr as u32 + kr as u32;
+        if mull && n <= mull_n {
+            // Second Chances: the 5th chip is in the pot — carry on without the option, or start the round over
+            let val = self.v(ctx, w, safe, pr, kr, pos, white, flask, g, p, b, false, cb, mull_n, restart).max(restart);
+            self.memo.insert(key, val);
+            return val;
+        }
+        let mut best = Self::stop(ctx, w, safe, pr, kr, pos, white, flask, g, p, b, n);
         if n > 0 {
             let mut dv = 0.0;
             for wi in 0..3 {
                 let k = w[wi]; if k == 0 { continue; }
                 let v = wi as u8 + 1; let nw = white + v; let np = (pos + v).min(LAST as u8);
                 let val = if nw as i32 > ctx.limit {
-                    ctx.terminal(np as usize, true, g as i32, p as i32, b as i32, !flask)
+                    ctx.terminal(np as usize, true, g as i32, p as i32, b as i32, !flask, nw as i32)   // an explosion ends the round: no Second Chances
                 } else {
                     let mut w2 = w; w2[wi] -= 1;
-                    let mut val = self.v(ctx, w2, safe, pr, kr, np, nw, flask, g, p, b);
-                    if flask { val = val.max(self.v(ctx, w, safe, pr, kr, pos, white, false, g, p, b)); }
+                    let mut val = self.v(ctx, w2, safe, pr, kr, np, nw, flask, g, p, b, mull, false, mull_n, restart);
+                    // Cauldron Bubble returns the first white for free; otherwise the flask may
+                    if cb { val = val.max(self.v(ctx, w, safe, pr, kr, pos, white, flask, g, p, b, mull, false, mull_n, restart)); }
+                    else if flask { val = val.max(self.v(ctx, w, safe, pr, kr, pos, white, false, g, p, b, mull, cb, mull_n, restart)); }
                     val
                 };
                 dv += k as f64 * val;
@@ -268,10 +359,10 @@ impl Abstract {
             for v in 0..8 {
                 let k = safe[v]; if k == 0 { continue; }
                 let mut s2 = safe; s2[v] -= 1;
-                dv += k as f64 * self.v(ctx, w, s2, pr, kr, (pos + v as u8).min(LAST as u8), white, flask, g, p, b);
+                dv += k as f64 * self.v(ctx, w, s2, pr, kr, (pos + v as u8).min(LAST as u8), white, flask, g, p, b, mull, cb, mull_n, restart);
             }
-            if pr > 0 { dv += pr as f64 * self.v(ctx, w, safe, pr - 1, kr, (pos + 1).min(LAST as u8), white, flask, g, p + 1, b); }
-            if kr > 0 { dv += kr as f64 * self.v(ctx, w, safe, pr, kr - 1, (pos + 1).min(LAST as u8), white, flask, g, p, b + 1); }
+            if pr > 0 { dv += pr as f64 * self.v(ctx, w, safe, pr - 1, kr, (pos + 1).min(LAST as u8), white, flask, g, p + 1, b, mull, cb, mull_n, restart); }
+            if kr > 0 { dv += kr as f64 * self.v(ctx, w, safe, pr, kr - 1, (pos + 1).min(LAST as u8), white, flask, g, p, b + 1, mull, cb, mull_n, restart); }
             dv /= n as f64;
             if dv > best { best = dv; }
         }
@@ -292,6 +383,11 @@ pub struct Brew<'a> {
     memo: FxMap<u128, f64>,
     bmemo: FxMap<(u128, u8), f64>,
     pub abs: Abstract,
+    /// Second Chances: chips left in the bag once the 5th is in the pot (u32::MAX = no card), the
+    /// start state, and (lazily) the value of starting the round over without the option
+    pub mull_n: u32,
+    start0: Option<State>,
+    restart: Option<f64>,
 }
 
 fn comb(n: u32, k: u32) -> f64 {
@@ -318,17 +414,58 @@ fn combos(bag: &Bag, k: u32, start: usize, cur: &mut Vec<usize>, ways: f64, out:
 
 impl<'a> Brew<'a> {
     pub fn new(ctx: &'a Ctx, start_bag: Bag, flask_full: bool, depth: u8) -> Brew<'a> {
+        let mull = ctx.mulligan && total(&start_bag) > 5;
         Brew { ctx, start_bag, n_o: start_bag[I_O] as i32, n_p: start_bag[I_P] as i32, n_k: start_bag[I_K] as i32,
-               flask_full, depth, memo: FxMap::default(), bmemo: FxMap::default(), abs: Abstract::new() }
+               flask_full, depth, memo: FxMap::default(), bmemo: FxMap::default(), abs: Abstract::new(),
+               mull_n: if mull { total(&start_bag) - 5 } else { u32::MAX }, start0: None, restart: None }
     }
-    pub fn start(&self, droplet: i32, rats: u32) -> State {
-        State { bag: self.start_bag, pos: (droplet as u32 + rats).min(LAST as u32) as u8, white: 0, lastw: 0, g1: false, g2: false, flask: self.flask_full }
+    pub fn start(&mut self, droplet: i32, rats: u32) -> State {
+        let s = State { bag: self.start_bag, pos: (droplet as u32 + rats).min(LAST as u32) as u8, white: 0, lastw: 0, g1: false, g2: false, flask: self.flask_full,
+                        mull: self.mull_n != u32::MAX, cb: self.ctx.bubble };
+        self.start0 = Some(s);
+        s
+    }
+    /// Second Chances: value of putting everything back and starting the round over (no second mulligan).
+    pub fn restart_value(&mut self) -> f64 {
+        if let Some(r) = self.restart { return r; }
+        let mut s = self.start0.expect("start() before restart_value()");
+        s.mull = false;
+        let d = self.depth;
+        let r = self.v(&s, d);
+        self.restart = Some(r);
+        r
     }
     #[inline]
-    fn term(&self, s: &State, exploded: bool) -> f64 {
-        self.ctx.terminal(s.pos as usize, exploded, s.g1 as i32 + s.g2 as i32, self.n_p - s.bag[I_P] as i32, self.n_k - s.bag[I_K] as i32, !s.flask)
+    pub fn term(&self, s: &State, exploded: bool) -> f64 {
+        self.ctx.terminal(s.pos as usize, exploded, s.g1 as i32 + s.g2 as i32, self.n_p - s.bag[I_P] as i32, self.n_k - s.bag[I_K] as i32, !s.flask, s.white as i32)
     }
-    pub fn stop_value(&self, s: &State) -> f64 { self.term(s, false) }
+    /// Value of stopping here; with Safety Procedure out, the reveal-5-place-1 that follows a stop.
+    pub fn stop_value(&self, s: &State) -> f64 {
+        let base = self.term(s, false);
+        let n = total(&s.bag);
+        if !self.ctx.safety || n == 0 { return base; }
+        let k = n.min(5);
+        let mut opts = vec![];
+        for i in 0..N {
+            let c = s.bag[i]; if c == 0 { continue; }
+            let (s2, boom) = self.placed(&s.without(i), i, false);
+            if boom { continue; }
+            let v = self.term(&s2, false);
+            if v > base { opts.push((v, 1.0 - comb(n - c as u32, k) / comb(n, k))); }
+        }
+        expected_best(opts, base)
+    }
+    /// Safety Procedure at the table: which of the revealed chips to place (None = put them all back).
+    pub fn safety_pick(&self, s: &State, revealed: &[usize]) -> (Option<usize>, f64) {
+        let mut best = (None, self.term(s, false));
+        for &j in revealed {
+            let (s2, boom) = self.placed(&s.without(j), j, false);
+            if boom { continue; }
+            let v = self.term(&s2, false);
+            if v > best.1 { best = (Some(j), v); }
+        }
+        best
+    }
     pub fn explode_prob(&self, s: &State) -> f64 {
         let n = total(&s.bag); if n == 0 { return 0.0; }
         let mut c = 0u32;
@@ -345,11 +482,12 @@ impl<'a> Brew<'a> {
         }
         if c == b'W' {
             white += v; pos += v;
-            return (State { bag, pos: pos.min(LAST as i32) as u8, white: white as u8, lastw: v as u8, g1: false, g2: g1, flask: s.flask }, white > self.ctx.limit);
+            return (State { bag, pos: pos.min(LAST as i32) as u8, white: white as u8, lastw: v as u8, g1: false, g2: g1, flask: s.flask, mull: s.mull, cb: s.cb }, white > self.ctx.limit);
         }
         if c == b'R' { let o = self.n_o - bag[I_O] as i32; v += if o >= 3 { 2 } else if o >= 1 { 1 } else { 0 }; }
+        if c == b'O' { v += self.ctx.orange_bonus; }
         pos += v;
-        (State { bag, pos: pos.min(LAST as i32) as u8, white: white as u8, lastw: 0, g1: c == b'G', g2: g1, flask: s.flask }, false)
+        (State { bag, pos: pos.min(LAST as i32) as u8, white: white as u8, lastw: 0, g1: c == b'G', g2: g1, flask: s.flask, mull: s.mull, cb: s.cb }, false)
     }
     #[inline]
     pub fn use_flask(sb: &State) -> State { let mut s = *sb; s.flask = false; s }
@@ -357,7 +495,14 @@ impl<'a> Brew<'a> {
     pub fn v(&mut self, s: &State, d: u8) -> f64 {
         let key = s.key(d);
         if let Some(&v) = self.memo.get(&key) { return v; }
-        let mut best = self.term(s, false);
+        if s.mull && total(&s.bag) <= self.mull_n {
+            // Second Chances: the 5th chip is in the pot — carry on without the option, or start the round over
+            let mut t = *s; t.mull = false;
+            let val = self.v(&t, d).max(self.restart_value());
+            self.memo.insert(key, val);
+            return val;
+        }
+        let mut best = self.stop_value(s);
         let n = total(&s.bag);
         if n > 0 && d == 0 {
             best = best.max(self.leaf(s));
@@ -376,7 +521,9 @@ impl<'a> Brew<'a> {
     pub fn value(&mut self, s: &State) -> f64 { let d = self.depth; self.v(s, d) }
     fn leaf(&mut self, s: &State) -> f64 {
         let greens = s.g1 as i32 + s.g2 as i32;
-        self.abs.value(self.ctx, s, greens, self.n_p - s.bag[I_P] as i32, self.n_k - s.bag[I_K] as i32, self.n_o - s.bag[I_O] as i32)
+        let restart = if s.mull { self.restart_value() } else { 0.0 };
+        let ctx = self.ctx;
+        self.abs.value(ctx, s, greens, self.n_p - s.bag[I_P] as i32, self.n_k - s.bag[I_K] as i32, self.n_o - s.bag[I_O] as i32, self.mull_n, restart)
     }
     pub fn draw_value(&mut self, s: &State) -> Option<f64> {
         let n = total(&s.bag); if n == 0 { return None; }
@@ -389,7 +536,13 @@ impl<'a> Brew<'a> {
         let c = COLOR[i];
         let (s2, boom) = self.placed(s, i, false);
         if c == b'W' {
-            if boom { return self.term(&s2, true); }
+            if boom { return self.term(&s2, true); }   // an explosion ends the round: no Second Chances
+            if sb.cb {
+                // Cauldron Bubble: keep it (option spent) or put the first white back for free
+                let mut keep = s2; keep.cb = false;
+                let mut ret = *sb; ret.cb = false;
+                return self.v(&keep, d).max(self.v(&ret, d));
+            }
             let mut val = self.v(&s2, d);
             if sb.flask { val = val.max(self.v(&Self::use_flask(sb), d)); }
             return val;

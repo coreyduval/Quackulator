@@ -10,18 +10,29 @@
 
 use crate::data::*;
 
-pub const NF: usize = 1 + N + N + 8 + 1;
-/// index of the margin feature (last)
-pub const IDX_MARGIN: usize = NF - 1;
+/// features: constant, chip counts, their squares, 8 bag/resource terms, the margin, then the
+/// black-chip standing against the two neighbours (4 terms, format v3; older files load with zeros there)
+pub const NF: usize = 1 + N + N + 8 + 1 + 4;
+/// index of the margin feature
+pub const IDX_MARGIN: usize = 1 + N + N + 8;
+pub const IDX_NB: usize = IDX_MARGIN + 1;
 pub const MARGIN_CLAMP: f64 = 30.0;
+/// clamp on "my blacks minus a neighbour's" (a lead of 3 is as good as any)
+pub const NB_CLAMP: f64 = 3.0;
 
 #[inline]
 pub fn sigmoid(z: f64) -> f64 { 1.0 / (1.0 + (-z).exp()) }
 
-pub fn features(bag: &Bag, droplet: i32, rubies: i32, flask: bool, margin: i32) -> [f64; NF] {
+/// `nb` = black chips in each neighbour's bag (a 2-player table repeats the one neighbour; the solo sim uses the OPP schedule)
+pub fn features(bag: &Bag, droplet: i32, rubies: i32, flask: bool, margin: i32, nb: [f64; 2]) -> [f64; NF] {
     let mut f = [0.0; NF];
     f[0] = 1.0;
     f[IDX_MARGIN] = (margin as f64).clamp(-MARGIN_CLAMP, MARGIN_CLAMP);
+    let (mine, lo, hi) = (bag[I_K] as f64, nb[0].min(nb[1]), nb[0].max(nb[1]));
+    f[IDX_NB] = (mine - lo).clamp(-NB_CLAMP, NB_CLAMP);
+    f[IDX_NB + 1] = (mine - hi).clamp(-NB_CLAMP, NB_CLAMP);
+    f[IDX_NB + 2] = if mine > lo { 1.0 } else { 0.0 };
+    f[IDX_NB + 3] = if mine > hi { 1.0 } else { 0.0 };
     let mut k = 1;
     for i in 0..N { f[k] = bag[i] as f64; k += 1; }
     for i in 0..N { f[k] = (bag[i] as f64).powi(2); k += 1; }
@@ -39,7 +50,8 @@ pub fn feature_names() -> Vec<String> {
     let mut v = vec!["const".to_string()];
     for i in 0..N { v.push(NAMES[i].to_string()); }
     for i in 0..N { v.push(format!("{}^2", NAMES[i])); }
-    for s in ["droplet", "droplet^2", "rubies", "flask", "white_value", "coloured_chips", "orange_x_red", "white_fraction", "margin"] { v.push(s.to_string()); }
+    for s in ["droplet", "droplet^2", "rubies", "flask", "white_value", "coloured_chips", "orange_x_red", "white_fraction", "margin",
+              "black_vs_weaker_nb", "black_vs_stronger_nb", "beats_weaker_nb", "beats_stronger_nb"] { v.push(s.to_string()); }
     v
 }
 
@@ -80,9 +92,9 @@ impl Model {
 
     /// Value of a bag state with the margin term left out (margin = 0). The shop ranks purchases
     /// with this; the brewing terminal adds `margin_coef(rnd) * margin` itself (WIN models).
-    pub fn value_state(&self, rnd: u32, bag: &Bag, droplet: i32, rubies: i32, flask: bool) -> f64 {
+    pub fn value_state(&self, rnd: u32, bag: &Bag, droplet: i32, rubies: i32, flask: bool, nb: [f64; 2]) -> f64 {
         if rnd > ROUNDS { return 0.0; }
-        self.value(rnd, &features(bag, droplet, rubies, flask, 0))
+        self.value(rnd, &features(bag, droplet, rubies, flask, 0, nb))
     }
 
     /// Coefficient of the margin feature at the start of round `rnd` (1..=10); 0 for VP models.
@@ -199,8 +211,8 @@ impl Model {
             let open = rest[pos..].find('[').unwrap() + pos;
             let close = rest[open..].find(']').unwrap() + open;
             let nums: Vec<f64> = rest[open + 1..close].split(',').map(|t| t.trim().parse::<f64>().unwrap()).collect();
-            // VP models written before the margin feature existed have NF-1 coefficients
-            assert!(nums.len() == NF || (!win && nums.len() == NF - 1), "weights.json: round {} has {} coefficients, expected {}", r, nums.len(), NF);
+            // older files stop before the margin (VP v1) or the neighbour-black block (win v2): those coefficients stay 0
+            assert!(nums.len() == NF || nums.len() == IDX_NB || (!win && nums.len() == IDX_MARGIN), "weights.json: round {} has {} coefficients, expected {}", r, nums.len(), NF);
             for i in 0..nums.len() { m.coef[r][i] = nums[i]; }
             pos = close + 1;
         }

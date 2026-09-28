@@ -28,8 +28,11 @@ class MainActivity : AppCompatActivity() {
         web.loadUrl("https://appassets.androidplatform.net/assets/index.html")
     }
 
+    // The page keeps its own back stack (screens and popups); leave the app only when it has nothing to go back to.
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (web.canGoBack()) web.goBack() else super.onBackPressed()
+        web.evaluateJavascript("window.quackBack ? window.quackBack() : false") { handled ->
+            if (handled != "true") finish()
+        }
     }
 }

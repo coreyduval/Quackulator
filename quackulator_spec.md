@@ -12,7 +12,7 @@ or from numbers the user types in advisor mode.
 
 ### Round flow (9 rounds)
 
-1. **Fortune teller card** — modeled as optional modifiers (see §4).
+1. **Fortune teller card** — one of the 24 cards, drawn from a deck shuffled per game (see §4).
 2. **Rats** (round 2+) — every player behind the leader counts the rat tails between their VP
    and the leader's VP on the scoring track; the rat stone goes that many spaces past the droplet
    and the first chip is placed from there.
@@ -140,13 +140,42 @@ Ruby spending (droplet vs flask refill vs hold) is chosen the same way.
   beat the opponent; 3+: beat either / both neighbours.
 - `n_opponents`.
 
+All of these are measured, not hand-set: `quackulator table --calibrate` prints them for the
+policy at the table. Last measured 2026-09-26 (v32 win model, four seats, fortune deck): the
+opponents' non-exploded spaces run 9.7 / 15.1 / 27.7 / 45.9 in rounds 1 / 3 / 6 / 9 with sd 4.3,
+survival 0.65, the leader enters round 9 on 46 VP. The value function also sees the neighbours'
+black chips (four features), so the shop can weigh a moth against what the neighbours hold.
+
 Advisor mode lets the user override the leader's VP and the number of opponents each round.
 
-## 4. Fortune-teller modifiers (advisor)
+## 4. Fortune-teller cards (`Fortune.txt`, `rust/src/fortune.rs`, app `FORTUNE`)
 
-Cards are modeled as switches the user can set for the round: explosion threshold (7/8/9),
-droplet +1 this round, "exploded pots still get coins **and** VP", "+N VP if you don't explode",
-bag additions. Unknown cards → set nothing.
+24 cards, one drawn at the start of every round (before the rats) from a deck shuffled once per
+game, so a card comes up at most once. The Rust sim draws them by default (`--fortune deck`;
+`off` or a card name to force one); the app asks which card came up after the round prompt.
+
+**Blue (11) = a rule for the round**, carried in the solver context (`Ctx`) so the expectimax
+values it: Portentous Potables (limit 9), Pumpkin Party (orange +1), Bubbling Over (exactly 7
+whites at a stop = droplet step), Lucky Devil (+2 VP on a ruby space, even exploded), Fire Burn
+(extra ruby on a ruby space), Flask Rabbit (flask use is free), Double Double (die value ×2,
+both rolls count — assumption), Safety Procedure (the stop value is the expected best of a
+5-chip reveal, reveals treated as independent; at the table the actual reveal is ranked),
+Second Chances (state flag `mull`; when the 5th chip is in the pot the value is
+max(continue, restart) with restart = the round's value without the option; an exploding 5th
+chip ends the round, no restart), Cauldron Bubble (state flag `cb`; the first white may go back
+for free, so the flask is never spent on it), Toil and Trouble (no effect on the brew; at the
+table an exploded pot hands the left neighbour a 2-chip picked by that seat's value function).
+
+**Purple (13) = immediate**, resolved by ranking every option with the seat's value function
+V_r (the WIN model folds VP gains into the margin; round 1 ranks with V_2 because V_1 is a
+constant): Choices (black / any 2-chip / 3 rubies), Wheeling and Dealing (ruby → 1-chip or keep),
+Boomberry Cleanse (+4 VP or a white 1 out), Rat-a-Tat (any 4-chip or 1 VP per rat tail),
+Decisions (droplet +2 or purple), Flea Market (4 drawn chips, upgrade one to the next value of
+its colour, else green 1), Good Start (rat stone back k for k rubies, priced by re-solving the
+brew from the shorter start with the extra rubies). No decision: Drop It, Infestation (rats ×2),
+Charity, Beginner's Luck, Less is More, Take a Chance — settled from the real table in `table`
+mode; the solo sim uses fixed stand-ins (fewest rubies if ≤1, fewest VP if 3+ behind, lowest
+5-chip sum if ≤6). VP gained by a purple card recomputes the rat tails.
 
 ## 5. Files
 

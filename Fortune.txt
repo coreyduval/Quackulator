@@ -1,0 +1,107 @@
+QUACKS OF QUEDLINBURG - FORTUNE CARDS (24 total)
+================================================
+Blue cards (11) = rule change that lasts for the current round.
+Purple cards (13) = one-time effect resolved immediately.
+[CHOOSE] = player picks one of the listed options.
+
+------------------------------------------------
+BLUE - ROUND EFFECTS (11)
+------------------------------------------------
+Bubbling Over
+  Text: If your white tokens total exactly 7 when you stop drawing, move your droplet marker a space forward.
+  Summary: Whites exactly = 7 at stop -> droplet +1.
+
+Toil and Trouble
+  Text: If your cauldron explodes this round, the player to your left gets to take any 2-value token from the supply.
+  Summary: You explode -> left neighbor gains any 2-value token.
+
+Second Chances
+  Text: After you put the first 5 tokens on your cauldron, you can choose to continue drawing or put all of your tokens back in your bag and begin the round all over again. You can only do this once.
+  Summary: One mulligan after your first 5 tokens.
+
+Double Double
+  Text: Whenever anyone rolls the bonus die this round, they can roll it twice.
+  Summary: Bonus die rolls get a reroll/second roll this round.
+
+Portentous Potables
+  Text: This round, the cauldron explosion limit is increased from 7 to 9.
+  Summary: Explosion threshold 7 -> 9.
+
+Pumpkin Party
+  Text: This round, every orange token moves an extra space forward.
+  Summary: Orange tokens +1 space.
+
+Safety Procedure
+  Text: Beginning with the start player, if you stop before your cauldron explodes, draw up to 5 tokens from your bag. You can put one of them on your cauldron.
+  Summary: Stop without exploding -> peek up to 5, place 1 of them.
+
+Lucky Devil
+  Text: If your final space this round shows a ruby, score 2 victory points (even if your cauldron has exploded).
+  Summary: End on a ruby space -> +2 VP (works even if exploded).
+
+Flask Rabbit
+  Text: At the end of the round, refill all flasks for free.
+  Summary: Free flask refill at round end.
+
+Cauldron Bubble
+  Text: This round, you can put the first white token you draw back into your bag.
+  Summary: Ignore your first white draw (return it to bag).
+
+Fire Burn
+  Text: If your final space this round shows a ruby, take an extra ruby.
+  Summary: End on a ruby space -> +1 extra ruby.
+
+------------------------------------------------
+PURPLE - IMMEDIATE EFFECTS (13)
+------------------------------------------------
+Choices, Choices [CHOOSE]
+  Text: Take a black token OR any 2-value token OR 3 rubies.
+  Summary: Black token / any 2-value token / 3 rubies.
+
+Drop It
+  Text: Move your droplet marker a space forward.
+  Summary: Droplet +1.
+
+Wheeling and Dealing
+  Text: You can trade in a ruby for any 1-value token besides purple or black.
+  Summary: Optional: 1 ruby -> any 1-value token (not purple/black).
+
+Charity
+  Text: The player(s) with the fewest rubies can take a ruby.
+  Summary: Fewest rubies -> +1 ruby.
+
+Beginner's Luck
+  Text: The player(s) with the fewest victory points receives a green 1 token.
+  Summary: Fewest VP -> green 1.
+
+Boomberry Cleanse [CHOOSE]
+  Text: Score 4 victory points OR remove a white 1 token from your bag.
+  Summary: +4 VP / remove a white 1.
+
+Infestation
+  Text: Count your rat tails again and move your rat marker that many extra spaces.
+  Summary: Rat tails counted twice this round.
+
+Less is More
+  Text: Everyone draws 5 tokens from their bags. The player(s) with the lowest sum takes a blue 2 token. Everyone else takes a ruby. Put the tokens back in your bags.
+  Summary: All draw 5; lowest total -> blue 2, everyone else -> 1 ruby.
+
+Good Start
+  Text: You can move your rat marker back by 1-3 spaces and take that many rubies.
+  Summary: Optional: rat marker back 1-3 -> that many rubies.
+
+Rat-a-Tat [CHOOSE]
+  Text: Take any 4-value token OR score a victory point for each rat tail you're currently behind the leader.
+  Summary: Any 4-value token / 1 VP per rat tail behind leader.
+
+Decisions, Decisions... [CHOOSE]
+  Text: Move your droplet marker 2 spaces forward OR take a purple token.
+  Summary: Droplet +2 / purple token.
+
+Take a Chance
+  Text: Everyone rolls the bonus die once and gets the reward shown.
+  Summary: Everyone rolls bonus die once.
+
+Flea Market
+  Text: Draw 4 tokens from your bag. You can trade one in for the next higher value of the same color from the supply. If you're not able to do this, you can take a green 1 instead. Put all the tokens into your bag.
+  Summary: Draw 4, upgrade one to next value of same color; if impossible, take green 1.

@@ -15,6 +15,45 @@ pub static ALLOW: AtomicU32 = AtomicU32::new(u32::MAX);
 pub static MAX_ORANGE: AtomicU32 = AtomicU32::new(u32::MAX);
 /// `--max-black N`: no black purchases once the bag holds N blacks.
 pub static MAX_BLACK: AtomicU32 = AtomicU32::new(u32::MAX);
+/// Black-chip buying rule layered over a seat's shop policy (table experiments, `--black`):
+///   model    the value function decides (default)
+///   none     never buys black
+///   setN     buys a black whenever the bag holds fewer than N (`one` = set1)
+///   arms     buys a black whenever a neighbour has at least as many as me (stay strictly ahead)
+///   nb       buys a black only when it would beat a neighbour I currently tie with
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum BlackRule { Model, Never, Set(u8), Arms, Neighbour }
+pub fn parse_black_rule(s: &str) -> BlackRule {
+    let t = s.trim().to_lowercase();
+    match t.as_str() {
+        "model" | "" => BlackRule::Model,
+        "none" | "never" => BlackRule::Never,
+        "one" => BlackRule::Set(1),
+        "arms" => BlackRule::Arms,
+        "nb" | "neighbour" | "neighbor" => BlackRule::Neighbour,
+        _ if t.starts_with("set") => BlackRule::Set(t[3..].parse().unwrap_or_else(|_| panic!("bad black rule {}", s))),
+        _ => panic!("unknown black rule {} (model|none|setN|one|arms|nb)", s),
+    }
+}
+pub fn black_rule_name(r: BlackRule) -> String {
+    match r { BlackRule::Model => "model".into(), BlackRule::Never => "none".into(), BlackRule::Set(n) => format!("set{}", n), BlackRule::Arms => "arms".into(), BlackRule::Neighbour => "nb".into() }
+}
+/// +1 = this shop's buy must include a black (when affordable and in stock), -1 = no black, 0 = free choice
+pub fn black_pref(rule: BlackRule, mine: u8, nb: &[u8]) -> i8 {
+    match rule {
+        BlackRule::Model => 0,
+        BlackRule::Never => -1,
+        BlackRule::Set(n) => if mine < n { 1 } else { -1 },
+        BlackRule::Arms => if nb.iter().any(|&k| k >= mine) { 1 } else { -1 },
+        BlackRule::Neighbour => if nb.iter().any(|&k| k == mine) { 1 } else { -1 },
+    }
+}
+/// Drop the buys a black preference rules out (a forced black only applies when one is affordable).
+pub fn filter_black(opts: &mut Vec<Vec<usize>>, pref: i8, coins: i32, stock: &Bag) {
+    if pref < 0 { opts.retain(|o| !o.contains(&I_K)); }
+    else if pref > 0 && coins >= PRICE[I_K] && stock[I_K] > 0 { opts.retain(|o| o.contains(&I_K)); }
+}
+
 /// `--only B` (colours) or `--only B2,B4,O` (chip names and/or colours), comma separated.
 pub fn set_only(spec: &str) {
     let mut m = 0u32;
@@ -54,11 +93,20 @@ fn next_round_ev(bag: &Bag, droplet: i32, flask: bool, ctx: &Ctx, abs: &mut Abst
     v
 }
 
+/// Value of brewing round `rnd` at the v1 rates from the droplet (with the round's rat tails):
+/// the heuristic's state value when a fortune card offers a choice.
+pub fn heuristic_state_value(bag: &Bag, droplet: i32, flask: bool, rnd: u32, my_vp: i32) -> f64 {
+    let ctx = Ctx::new(rnd, Terminal::Heuristic);
+    let mut abs = Abstract::new();
+    next_round_ev(bag, droplet, flask, &ctx, &mut abs, my_vp)
+}
+
 /// (purchase, ev) ranked best first — v1 method
-pub fn best_purchase_heuristic(bag: &Bag, coins: i32, rnd: u32, droplet: i32, flask: bool, my_vp: i32, stock: &Bag) -> Vec<(Vec<usize>, f64)> {
+pub fn best_purchase_heuristic(bag: &Bag, coins: i32, rnd: u32, droplet: i32, flask: bool, my_vp: i32, stock: &Bag, black: i8) -> Vec<(Vec<usize>, f64)> {
     let ctx = Ctx::new(rnd + 1, Terminal::Heuristic);
     let mut abs = Abstract::new();
-    let opts = purchase_options(bag, coins, rnd, stock);
+    let mut opts = purchase_options(bag, coins, rnd, stock);
+    filter_black(&mut opts, black, coins, stock);
     let mut scored: Vec<(Vec<usize>, f64)> = vec![];
     for o in opts.iter().filter(|o| o.len() <= 1) {
         scored.push((o.clone(), next_round_ev(&apply(bag, o), droplet, flask, &ctx, &mut abs, my_vp)));
@@ -95,7 +143,8 @@ pub fn spend_rubies_heuristic(bag: &Bag, mut rubies: i32, rnd: u32, mut droplet:
 // ------------------------------------------------------------------ learned mode
 /// Best use of `coins` and `rubies` after round `rnd`, scored by V_{rnd+1}.
 /// Returns (purchase, droplet steps bought, refill flask, value).
-pub fn best_shop_learned(model: &Model, bag: &Bag, coins: i32, rubies: i32, rnd: u32, droplet: i32, flask: bool, stock: &Bag) -> (Vec<usize>, i32, bool, f64) {
+#[allow(clippy::too_many_arguments)]
+pub fn best_shop_learned(model: &Model, bag: &Bag, coins: i32, rubies: i32, rnd: u32, droplet: i32, flask: bool, stock: &Bag, black: i8, nb: [f64; 2]) -> (Vec<usize>, i32, bool, f64) {
     if rnd >= ROUNDS {
         // game over: coins and rubies convert to VP (WIN model: the game-end logit without the margin term)
         let cash = (coins / 5 + rubies / 2) as f64;
@@ -103,7 +152,8 @@ pub fn best_shop_learned(model: &Model, bag: &Bag, coins: i32, rubies: i32, rnd:
         return (vec![], 0, false, v);
     }
     let next = rnd + 1;
-    let opts = purchase_options(bag, coins, rnd, stock);
+    let mut opts = purchase_options(bag, coins, rnd, stock);
+    filter_black(&mut opts, black, coins, stock);
     let mut best = (vec![], 0, false, f64::NEG_INFINITY);
     for o in &opts {
         let b = apply(bag, o);
@@ -112,7 +162,7 @@ pub fn best_shop_learned(model: &Model, bag: &Bag, coins: i32, rubies: i32, rnd:
             for refill in [false, true] {
                 if refill && (flask || rubies - 2 * steps < 2) { continue; }
                 let left = rubies - 2 * steps - if refill { 2 } else { 0 };
-                let v = model.value_state(next, &b, droplet + steps, left, flask || refill);
+                let v = model.value_state(next, &b, droplet + steps, left, flask || refill, nb);
                 if v > best.3 { best = (o.clone(), steps, refill, v); }
             }
         }
@@ -122,14 +172,15 @@ pub fn best_shop_learned(model: &Model, bag: &Bag, coins: i32, rubies: i32, rnd:
 
 /// PayTable for brewing round `rnd` with the learned model: for each (coins, rubies gained,
 /// droplet steps gained, flask used) the value of the best shop + ruby spend from that outcome.
-pub fn pay_table(model: &Model, bag: &Bag, rnd: u32, droplet: i32, rubies: i32, flask_full: bool, margin: i32, stock: &Bag) -> PayTable {
+#[allow(clippy::too_many_arguments)]
+pub fn pay_table(model: &Model, bag: &Bag, rnd: u32, droplet: i32, rubies: i32, flask_full: bool, margin: i32, stock: &Bag, nb: [f64; 2]) -> PayTable {
     let mut g = vec![0.0; PayTable::len()];
     for c in 0..36usize {
         for r in 0..=RUBMAX {
             for d in 0..=DDMAX {
                 for fu in 0..2usize {
                     let flask_now = flask_full && fu == 0;
-                    let (_, _, _, v) = best_shop_learned(model, bag, c as i32, rubies + r as i32, rnd, droplet + d as i32, flask_now, stock);
+                    let (_, _, _, v) = best_shop_learned(model, bag, c as i32, rubies + r as i32, rnd, droplet + d as i32, flask_now, stock, 0, nb);
                     g[PayTable::index(c, r, d, fu)] = v;
                 }
             }
@@ -137,7 +188,7 @@ pub fn pay_table(model: &Model, bag: &Bag, rnd: u32, droplet: i32, rubies: i32, 
     }
     let d_orange = if rnd >= ROUNDS { 0.0 } else {
         let mut b2 = *bag; b2[I_O] += 1;
-        model.value_state(rnd + 1, &b2, droplet, rubies, flask_full) - model.value_state(rnd + 1, bag, droplet, rubies, flask_full)
+        model.value_state(rnd + 1, &b2, droplet, rubies, flask_full, nb) - model.value_state(rnd + 1, bag, droplet, rubies, flask_full, nb)
     };
     let (a, m0) = if model.win { (model.margin_coef(rnd + 1), margin as f64 - model.opp_gain[rnd as usize]) } else { (0.0, 0.0) };
     PayTable { g, d_orange, win: model.win, a, m0 }

@@ -5,10 +5,12 @@
 //!   cargo run --release -- train [--table] [--games N] [--passes K] [--out weights.json] [--init weights.json]
 //!   cargo run --release -- table --players v1,weights.json,weights_ORBK.json,v1 [--games N] [--seed S] [--trace]
 //!       2-4 players at one table; rat tails, bonus die and black chips settled from the real results
+//!   --fortune deck|off|<card name>   fortune-teller cards (sim and table): a shuffled 24-card deck, none, or one card every round
 //!   --only B  /  --only O,R  /  --only B2,B4  restricts the shop (sim and train) to those colours/chips
 //!                                [--lambda L] [--depth D] [--threads T]
 
 mod data;
+mod fortune;
 mod game;
 mod model;
 mod shop;
@@ -22,6 +24,7 @@ use std::time::Instant;
 use data::*;
 use game::{play_game, GameResult};
 use table::{play_table, Seat};
+use shop::{black_rule_name, parse_black_rule, BlackRule};
 use model::{features_end, Model, IDX_MARGIN, NF};
 use solver::*;
 
@@ -32,14 +35,14 @@ fn arg(args: &[String], key: &str) -> Option<String> {
 fn parity(weights: Option<String>) {
     if let Some(w) = weights {
         let m = Model::from_json(&std::fs::read_to_string(&w).expect("read weights"));
-        println!("learned-mode parity (droplet 0, rubies 1, flask full, depth 1):");
+        println!("learned-mode parity (droplet 0, rubies 1, flask full, depth 1, neighbours' blacks 1 and 0):");
         for (r, b) in [(1u32, "W1x4 W2x2 W3 O1 G1"), (5, "W1x5 W2x2 W3 O1x3 G1x2 B1 R1 R2 Y1")] {
             let bag = parse_bag(b);
-            let ctx = Ctx::new(r, Terminal::Learned(shop::pay_table(&m, &bag, r, 0, 1, true, 0, &initial_stock(4))));
+            let ctx = Ctx::new(r, Terminal::Learned(shop::pay_table(&m, &bag, r, 0, 1, true, 0, &initial_stock(4), [1.0, 0.0])));
             let mut brew = Brew::new(&ctx, bag, true, 1);
             let s = brew.start(0, 0);
             let (_, stop, draw) = brew.should_draw(&s);
-            let sh = shop::best_shop_learned(&m, &bag, 12, 3, r, 0, true, &initial_stock(4));
+            let sh = shop::best_shop_learned(&m, &bag, 12, 3, r, 0, true, &initial_stock(4), 0, [1.0, 0.0]);
             println!("  round {} V={:.4} stop={:.4} draw={:.4}  shop(12 coins,3 rubies)={:?} steps {} refill {} v {:.4}", r, brew.value(&s), stop, draw.unwrap(),
                 sh.0.iter().map(|&i| NAMES[i]).collect::<Vec<_>>(), sh.1, sh.2, sh.3);
         }
@@ -63,12 +66,26 @@ fn parity(weights: Option<String>) {
     // the round-9 playtest state from MAXIMS.md, exact solve
     let ctx = Ctx::new(9, Terminal::Heuristic);
     let mut brew = Brew::new(&ctx, parse_bag("W1x5 W2x2 W3 O1x8 R1x2 R2x2 R4 B1x2 B2 B4 K1x2"), true, 99);
-    let s = State { bag: parse_bag("W1 W2x2 O1x4 R1 R2 R4 B1 B2 B4 K1"), pos: 25, white: 7, lastw: 1, g1: false, g2: false, flask: true };
+    let s = State { bag: parse_bag("W1 W2x2 O1x4 R1 R2 R4 B1 B2 B4 K1"), pos: 25, white: 7, lastw: 1, g1: false, g2: false, flask: true, mull: false, cb: false };
     let (d, stop, draw) = brew.should_draw(&s);
     println!("round-9 playtest state, exact: stop {:.4} draw {:.4} -> {} (python: 10.08 / 10.65 DRAW)", stop, draw.unwrap(), if d { "DRAW" } else { "STOP" });
-    let ranked = shop::best_purchase_heuristic(&starting_bag(), 10, 1, 0, true, 2, &initial_stock(4));
+    let ranked = shop::best_purchase_heuristic(&starting_bag(), 10, 1, 0, true, 2, &initial_stock(4), 0);
     println!("shop parity (start bag, 10 coins, after round 1): {:?}", ranked.iter().take(3).map(|(o, v)| (o.iter().map(|&i| NAMES[i]).collect::<Vec<_>>().join("+"), (v * 1000.0).round() / 1000.0)).collect::<Vec<_>>());
     println!("python gave: K1 9.176, B2 7.871, G2 7.380");
+    // blue fortune cards: the round-5 bag at depth 2 from the start, and from a mid-round state (compare with the app's fortune harness)
+    println!("fortune parity (round 5 bag, heuristic, depth 2): card                 V(start)  stop     draw   | mid: pos 9 white 4 lastw 1, bag less W1 W3 O1 R2: stop     draw");
+    let bag = parse_bag("W1x5 W2x2 W3 O1x3 G1x2 B1 R1 R2 Y1");
+    for card in fortune::ALL.iter().filter(|c| !c.immediate()) {
+        let mut ctx = Ctx::new(5, Terminal::Heuristic);
+        ctx.apply_fortune(*card);
+        let mut brew = Brew::new(&ctx, bag, true, 2);
+        let s = brew.start(0, 0);
+        let v = brew.value(&s);
+        let (_, stop, draw) = brew.should_draw(&s);
+        let mid = State { bag: parse_bag("W1x4 W2x2 O1x2 G1x2 B1 R1 Y1"), pos: 9, white: 4, lastw: 1, g1: false, g2: false, flask: true, mull: s.mull, cb: s.cb };
+        let (_, mstop, mdraw) = brew.should_draw(&mid);
+        println!("  {:<20} {:.4}  {:.4}  {:.4}  |  {:.4}  {:.4}", card.name(), v, stop, draw.unwrap(), mstop, mdraw.unwrap());
+    }
 }
 
 fn run_games(n: usize, seed0: u64, model: Option<Arc<Model>>, depth: u8, threads: usize, record: bool, explore: f64) -> Vec<GameResult> {
@@ -144,7 +161,7 @@ fn train_table(games: usize, passes: usize, seed0: u64, init: Option<Arc<Model>>
         let t = Instant::now();
         let seats: Vec<Seat> = match &cand { None => vec![best.clone(); 4], Some(c) => vec![Some(c.clone()), best.clone(), Some(c.clone()), best.clone()] };
         let seed = seed0 + (pass as u64) * 1_000_000;
-        let tables = run_tables(games, seed, Arc::new(seats), depth, threads, true, explore);
+        let tables = run_tables(games, seed, Arc::new(seats), Arc::new(vec![BlackRule::Model; 4]), depth, threads, true, explore);
         let n = tables.len() as f64;
         // candidate win rate (ties split between the tied seats)
         let mut rate = 0.0;
@@ -201,7 +218,7 @@ fn train_table(games: usize, passes: usize, seed0: u64, init: Option<Arc<Model>>
                 println!("   V_{}: end model P(win) = sigmoid({:.3} + {:.3} * final margin), {} samples, log-loss {:.3}", r, c, a, xs.len(), ll);
             } else {
                 let w = &vpm.coef[ru];
-                for j in 1..IDX_MARGIN { m.coef[ru][j] = a * w[j]; }
+                for j in 1..NF { if j != IDX_MARGIN { m.coef[ru][j] = a * w[j]; } }
                 m.coef[ru][0] = c + a * (w[0] - g_rest[ru]);
                 m.coef[ru][IDX_MARGIN] = a * (1.0 + w[IDX_MARGIN]);
                 let rmse = { let mut e = 0.0; let mut k = 0.0; for (x, _, v, rr) in &buf { if *rr == r { e += (vpm.value(r, x) - v).powi(2); k += 1.0; } } (e / k).sqrt() };
@@ -225,14 +242,14 @@ fn train_table(games: usize, passes: usize, seed0: u64, init: Option<Arc<Model>>
              out, if best_rate.is_finite() { format!(" ({:.1}% of wins vs its predecessor)", 100.0 * best_rate) } else { " (no candidate beat the initial policy; file unchanged)".to_string() }, out);
 }
 
-fn run_tables(n: usize, seed0: u64, seats: Arc<Vec<Seat>>, depth: u8, threads: usize, record: bool, explore: f64) -> Vec<Vec<GameResult>> {
+fn run_tables(n: usize, seed0: u64, seats: Arc<Vec<Seat>>, rules: Arc<Vec<BlackRule>>, depth: u8, threads: usize, record: bool, explore: f64) -> Vec<Vec<GameResult>> {
     let mut handles = vec![];
     let per = (n + threads - 1) / threads;
     for t in 0..threads {
         let lo = t * per; let hi = ((t + 1) * per).min(n);
         if lo >= hi { break; }
-        let seats = seats.clone();
-        handles.push(thread::spawn(move || (lo..hi).map(|i| play_table(seed0 + i as u64, &seats, depth, record, explore, false)).collect::<Vec<_>>()));
+        let seats = seats.clone(); let rules = rules.clone();
+        handles.push(thread::spawn(move || (lo..hi).map(|i| play_table(seed0 + i as u64, &seats, &rules, depth, record, explore, false)).collect::<Vec<_>>()));
     }
     let mut out = vec![];
     for h in handles { out.extend(h.join().unwrap()); }
@@ -242,7 +259,7 @@ fn run_tables(n: usize, seed0: u64, seats: Arc<Vec<Seat>>, depth: u8, threads: u
 fn summarise_table(names: &[String], games: &[Vec<GameResult>]) {
     let n = games.len() as f64;
     println!("{} games, {} seats", games.len(), names.len());
-    println!("seat  policy                 mean VP    sd   win%  rats/game  die/game  explode%  bought O/G/B/R/Y/P/K");
+    println!("seat  policy                 mean VP    sd   win%  rats/game  die/game  explode%  bought O/G/B/R/Y/P/K   black drop/ruby per game  drawn");
     for (i, name) in names.iter().enumerate() {
         let rs: Vec<&GameResult> = games.iter().map(|g| &g[i]).collect();
         let mean = rs.iter().map(|r| r.vp as f64).sum::<f64>() / n;
@@ -252,8 +269,40 @@ fn summarise_table(names: &[String], games: &[Vec<GameResult>]) {
         let die = rs.iter().map(|r| r.die_wins as f64).sum::<f64>() / n;
         let ex = 100.0 * rs.iter().map(|r| r.exploded.iter().filter(|&&e| e).count() as f64).sum::<f64>() / (9.0 * n);
         let bought: Vec<String> = "OGBRYPK".chars().map(|c| format!("{:.1}", rs.iter().map(|r| (0..N).filter(|&i| COLOR[i] as char == c).map(|i| r.bought[i]).sum::<u32>() as f64).sum::<f64>() / n)).collect();
-        println!("P{}    {:<22} {:6.2}  {:4.1}  {:5.1}  {:8.2}  {:8.2}  {:8.1}  {}", i + 1, name, mean, sd, win, rats, die, ex, bought.join("/"));
+        let bd = rs.iter().map(|r| r.black_drop as f64).sum::<f64>() / n;
+        let br = rs.iter().map(|r| r.black_ruby as f64).sum::<f64>() / n;
+        let drawn = rs.iter().map(|r| r.drawn as f64).sum::<f64>() / rs.iter().map(|r| r.bagsize as f64).sum::<f64>();
+        println!("P{}    {:<22} {:6.2}  {:4.1}  {:5.1}  {:8.2}  {:8.2}  {:8.1}  {:<22} {:.2} / {:.2}                {:.2}", i + 1, name, mean, sd, win, rats, die, ex, bought.join("/"), bd, br, drawn);
     }
+}
+
+/// `table --calibrate`: the data::OPP opponent model as measured at these tables (per-seat, per-round):
+/// leader VP at the start of the round, the non-exploded scoring-space distribution, survival rate,
+/// mean blacks in a pot, and the share of the bag a brew draws.
+fn calibrate(games: &[Vec<GameResult>]) {
+    let n = games.len() as f64;
+    let seats = games[0].len() as f64;
+    let mut leader = vec![0.0; 10]; let mut sp_mean = vec![0.0; 10]; let mut sp_sd = 0.0; let mut sd_n = 0.0; let mut surv = 0.0; let mut black = vec![0.0; 10];
+    for r in 1..=9usize {
+        let mut vals: Vec<f64> = vec![];
+        for g in games {
+            if r >= 2 { leader[r] += g.iter().map(|x| x.vp_after[r - 2]).max().unwrap() as f64 / n; }
+            for x in g { if !x.exploded[r - 1] { vals.push(x.spaces[r - 1] as f64); } black[r] += x.blacks_pot[r - 1] as f64 / (n * seats); }
+        }
+        let m = vals.iter().sum::<f64>() / vals.len() as f64;
+        sp_mean[r] = m;
+        for &v in &vals { sp_sd += (v - m).powi(2); sd_n += 1.0; }
+        surv += vals.len() as f64 / (n * seats * 9.0);
+    }
+    let drawn = games.iter().flatten().map(|x| x.drawn as f64).sum::<f64>() / games.iter().flatten().map(|x| x.bagsize as f64).sum::<f64>();
+    println!("
+calibration (paste into data.rs OPP / app OPP):");
+    println!("    leader_vp: [{}],", (0..10).map(|r| format!("{}", leader[r].round() as i32)).collect::<Vec<_>>().join(", "));
+    println!("    best_space_mean: [{}],", (0..10).map(|r| format!("{:.1}", sp_mean[r])).collect::<Vec<_>>().join(", "));
+    println!("    best_space_sd: {:.1},", (sp_sd / sd_n).sqrt());
+    println!("    p_survive: {:.2},", surv);
+    println!("    opp_black: [{}],", (0..10).map(|r| format!("{:.2}", black[r])).collect::<Vec<_>>().join(", "));
+    println!("    draw share: {:.2}", drawn);
 }
 
 fn main() {
@@ -266,11 +315,12 @@ fn main() {
     if let Some(only) = arg(&args, "--only") { shop::set_only(&only); println!("shop restricted to: {}", only); }
     if let Some(mo) = arg(&args, "--max-orange") { shop::MAX_ORANGE.store(mo.parse().unwrap(), std::sync::atomic::Ordering::Relaxed); println!("orange purchases capped at {} in bag", mo); }
     if let Some(mk) = arg(&args, "--max-black") { shop::MAX_BLACK.store(mk.parse().unwrap(), std::sync::atomic::Ordering::Relaxed); println!("black purchases capped at {} in bag", mk); }
+    if let Some(f) = arg(&args, "--fortune") { fortune::set_mode(&f); }
     match cmd {
         "parity" => parity(arg(&args, "--weights")),
         "sim" => {
             let model = arg(&args, "--weights").map(|p| Arc::new(Model::from_json(&std::fs::read_to_string(&p).expect("read weights"))));
-            println!("mode: {}  depth {}  threads {}", match &model { Some(m) if m.win => "learned (win)", Some(_) => "learned (VP)", None => "heuristic (v1)" }, depth, threads);
+            println!("mode: {}  depth {}  threads {}  fortune cards: {}", match &model { Some(m) if m.win => "learned (win)", Some(_) => "learned (VP)", None => "heuristic (v1)" }, depth, threads, fortune::mode_name());
             let t = Instant::now();
             if args.iter().any(|a| a == "--trace") {
                 for i in 0..games {
@@ -291,17 +341,23 @@ fn main() {
             let names: Vec<String> = spec.split(',').map(|s| s.trim().to_string()).collect();
             assert!((2..=4).contains(&names.len()), "--players takes 2 to 4 entries (v1 or a weights file)");
             let seats: Vec<Seat> = names.iter().map(|s| load_seat(s)).collect();
-            println!("table: {}  depth {}  threads {}", names.join(" | "), depth, threads);
+            // --black model,arms,set1,nb : one black-chip rule per seat (see shop::BlackRule)
+            let rules: Vec<BlackRule> = arg(&args, "--black").map(|s| s.split(',').map(parse_black_rule).collect()).unwrap_or_else(|| vec![BlackRule::Model; names.len()]);
+            assert!(rules.len() == names.len(), "--black needs one rule per seat");
+            if arg(&args, "--opp-black").as_deref() == Some("schedule") { table::NB_ACTUAL.store(false, std::sync::atomic::Ordering::Relaxed); }
+            let names: Vec<String> = names.iter().zip(&rules).map(|(s, r)| if *r == BlackRule::Model { s.clone() } else { format!("{} [{}]", s.trim_end_matches(".json"), black_rule_name(*r)) }).collect();
+            println!("table: {}  depth {}  threads {}  black pricing: {}  fortune cards: {}", names.join(" | "), depth, threads, if table::NB_ACTUAL.load(std::sync::atomic::Ordering::Relaxed) { "neighbours' real bags" } else { "OPP schedule" }, fortune::mode_name());
             let t = Instant::now();
             if args.iter().any(|a| a == "--trace") {
                 for i in 0..games {
-                    let r = play_table(seed0 + i as u64, &seats, depth, false, 0.0, true);
+                    let r = play_table(seed0 + i as u64, &seats, &rules, depth, false, 0.0, true);
                     println!("\nFINAL: {}", r.iter().enumerate().map(|(i, g)| format!("P{} {} = {} VP{}", i + 1, names[i], g.vp, if g.won { " (winner)" } else { "" })).collect::<Vec<_>>().join(", "));
                 }
                 return;
             }
-            let res = run_tables(games, seed0, Arc::new(seats), depth, threads, false, 0.0);
+            let res = run_tables(games, seed0, Arc::new(seats), Arc::new(rules), depth, threads, false, 0.0);
             summarise_table(&names, &res);
+            if args.iter().any(|a| a == "--calibrate") { calibrate(&res); }
             println!("{:.1}s", t.elapsed().as_secs_f64());
         }
         "train" => {
@@ -350,6 +406,6 @@ fn main() {
             }
             println!("done. best played policy: {:.2} mean VP -> {}. Evaluate: cargo run --release -- sim --weights {} --games 1000", best_mean, out, out);
         }
-        _ => println!("usage: parity | table [--players v1,weights.json,... --games N --seed S --trace] | sim [--games N --weights F --depth D --threads T --seed S --only B2,B4,O --max-orange N --max-black N --trace] | train [--table [--fix-vp] --games N --passes K --out F --init F --lambda L --explore E --depth D --threads T --only ...]"),
+        _ => println!("usage: parity | table [--players v1,weights.json,... --black model,arms,set1,nb --opp-black schedule --games N --seed S --trace] | sim [--games N --weights F --depth D --threads T --seed S --only B2,B4,O --max-orange N --max-black N --trace] | train [--table [--fix-vp] --games N --passes K --out F --init F --lambda L --explore E --depth D --threads T --only ...]   (all: --fortune deck|off|<card>)"),
     }
 }

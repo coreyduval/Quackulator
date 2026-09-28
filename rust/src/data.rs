@@ -101,11 +101,11 @@ pub struct Opponents {
 }
 pub const OPP: Opponents = Opponents {
     n: 2,
-    leader_vp: [0, 0, 1, 2, 4, 6, 10, 15, 21, 30],
-    best_space_mean: [0.0, 9.0, 11.0, 13.0, 15.0, 18.0, 21.0, 26.0, 31.0, 36.0],
-    best_space_sd: 5.0,
-    p_survive: 0.75,
-    opp_black: [0.0, 0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5],
+    leader_vp: [0, 0, 3, 5, 8, 12, 18, 25, 34, 46],
+    best_space_mean: [0.0, 9.7, 12.8, 15.1, 18.6, 23.4, 27.7, 34.4, 41.8, 45.9],
+    best_space_sd: 4.3,
+    p_survive: 0.65,
+    opp_black: [0.00, 0.03, 0.48, 0.85, 0.86, 0.82, 0.76, 0.81, 0.86, 0.87],
 };
 pub const RAT_TAIL_VP: [i32; 25] = [1, 3, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50];
 pub fn rat_tails(my: i32, leader: i32) -> u32 {
@@ -113,6 +113,8 @@ pub fn rat_tails(my: i32, leader: i32) -> u32 {
     RAT_TAIL_VP.iter().filter(|&&t| my < t && t < leader).count() as u32
 }
 
+/// Measured 2026-09-26 at 2000 four-seat tables of the v32 win model with the fortune deck (`table --calibrate`):
+/// per-seat non-exploded scoring-space distribution, survival, blacks per pot, leader VP at the start of each round.
 /// Heuristic exchange rates (v1), by round 1..9.
 pub const W_COIN: [f64; 10] = [0.0, 0.55, 0.52, 0.48, 0.44, 0.40, 0.35, 0.30, 0.25, 0.20];
 pub const W_RUBY: [f64; 10] = [0.0, 1.20, 1.15, 1.10, 1.05, 1.00, 0.90, 0.80, 0.65, 0.50];

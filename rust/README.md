@@ -37,7 +37,19 @@ Binary: `target/release/quackulator` (`quackulator.exe` on Windows). No dependen
         are settled from the seats' actual results instead of the data::OPP opponent model.
         The in-round solver still prices the die and black chip with OPP while brewing, since
         those outcomes are unknown until every pot has stopped. Prints per-seat mean VP, win%,
-        rat tails and die rolls per game. Fortune-teller cards are not modelled (nor in sim).
+        rat tails and die rolls per game.
+
+    table ... --calibrate
+        Also prints the data::OPP opponent model as measured at these tables (leader VP per round,
+        non-exploded scoring-space mean/sd, survival, blacks per pot, share of the bag drawn), ready
+        to paste into data.rs and the app. The constants were last measured on 2026-09-26 at 2000
+        four-seat tables of the v32 win model with the deck.
+
+    --fortune deck | off | <card name>      (sim, table and train)
+        Fortune-teller cards: a 24-card deck shuffled per game with one card drawn each round (the
+        default), none, or one card forced every round (e.g. --fortune "Second Chances", handy with
+        --trace). Blue cards are valued inside the brew solver; purple cards are resolved at the
+        start of the round with every choice ranked by the seat's value function (src/fortune.rs).
 
     cargo run --release -- train --table --games 5000 --passes 4 --explore 0.2 --init weights_win.json --out weights_win_v31.json
         WIN-objective training at 4-seat tables. The value function becomes P(win the game) from
@@ -93,8 +105,11 @@ Judge success by the `sim` mean VP with weights vs. without, and by the purchase
 3. Play the next pass with the fitted V as the terminal value (brewing) and the shop scorer.
    Repeat. The file `weights.json` always holds the policy that *played* best.
 
-Features (45 per round): constant, chip counts and their squares, droplet and droplet²,
-rubies, flask, total white value, coloured-chip count, orange×red count, white fraction.
+Features (50 per round): constant, chip counts and their squares, droplet and droplet²,
+rubies, flask, total white value, coloured-chip count, orange×red count, white fraction, the
+margin (WIN models), and the black-chip standing against the two neighbours (my blacks minus the
+weaker and the stronger neighbour's, clamped to ±3, plus two beats-them indicators; the app asks
+for the neighbours' black counts in the round prompt). Older weight files load with zeros there.
 The model is deliberately small so it exports as plain JSON and runs in the phone app in
 microseconds.
 
@@ -111,6 +126,7 @@ best policy is kept.
 ## Files
 
     src/data.rs     tables (same numbers as ../data.py)
+    src/fortune.rs  the 24 fortune-teller cards: deck, purple-card resolution, option ranking
     src/solver.rs   Ctx (heuristic or learned terminal), Abstract and full Brew solvers
     src/shop.rs     v1 shop, learned shop, PayTable builder
     src/model.rs    features, ridge fit, weights.json read/write
